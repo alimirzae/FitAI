@@ -2,7 +2,6 @@ import time
 import cv2
 import numpy as np
 import mediapipe as mp
-import base64
 
 POSE_NAMES = [
 "nose","left_eye_inner","left_eye","left_eye_outer","right_eye_inner","right_eye","right_eye_outer",
@@ -56,11 +55,8 @@ class PersonAnalyzer:
         segmentation=None
         if pose_result.segmentation_mask is not None:
             mask=pose_result.segmentation_mask
-            binary=(mask>0.5).astype(np.uint8)*255
-            ok,png=cv2.imencode(".png",binary)
             segmentation={"foreground_ratio":round(float(np.mean(mask>0.5)),4),
-                          "mean_confidence":round(float(np.mean(mask)),4),
-                          "mask_png_base64":base64.b64encode(png.tobytes()).decode("ascii") if ok else None}
+                          "mean_confidence":round(float(np.mean(mask)),4)}
         by={x["name"]:x for x in landmarks}
         def d(a,b):
             if a not in by or b not in by:return None
