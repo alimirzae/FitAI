@@ -40,6 +40,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
   const [activeTab, setActiveTab] = useState<'hair' | 'color' | 'facial_hair' | 'makeup'>('hair');
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const afterOverlayRef = useRef<HTMLCanvasElement>(null);
   const [liveAnalysis,setLiveAnalysis]=useState<LocalPersonAnalysis|null>(null);
   const [liveError,setLiveError]=useState<string|null>(null);
 
@@ -63,14 +64,23 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
   },[isCameraActive]);
 
   useEffect(()=>{
-    const c=overlayRef.current,v=liveVideoRef.current,a=liveAnalysis;if(!c||!v||!a)return;
-    const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
-    // Face box from real MediaPipe detection.
-    for(const f of a.faces||[]){const x=(1-f.x-f.width)*c.width,y=f.y*c.height,w=f.width*c.width,h=f.height*c.height;
-      ctx.strokeStyle='#f472b6';ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);
-      // Non-generative salon preview: tint an approximate hair region above the detected face.
-      ctx.save();ctx.globalAlpha=.32;ctx.fillStyle=config.hairColorHex;ctx.beginPath();ctx.ellipse(x+w/2,y+h*.12,w*.58,h*.55,0,Math.PI,Math.PI*2);ctx.fill();ctx.restore();
-    }
+    const a=liveAnalysis;if(!a)return;
+    const draw=(c:HTMLCanvasElement|null,tint:boolean)=>{
+      if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
+      const mesh=a.face_mesh?.[0]||[], by=new Map(mesh.map(p=>[p.index,p]));
+      const ids=[234,127,162,21,54,103,67,109,10,338,297,332,284,251,389,356,454];
+      const arc=ids.map(id=>by.get(id)).filter(Boolean) as Array<{x:number;y:number}>;
+      if(arc.length>8){
+        const pts=arc.map(p=>({x:(1-p.x)*c.width,y:p.y*c.height}));
+        const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),lift=(maxX-minX)*.48;
+        ctx.save();ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const p of pts.slice(1))ctx.lineTo(p.x,p.y);
+        ctx.quadraticCurveTo(maxX,minY-lift,(minX+maxX)/2,minY-lift*1.18);ctx.quadraticCurveTo(minX,minY-lift,pts[0].x,pts[0].y);ctx.closePath();
+        if(tint){ctx.globalAlpha=.48;ctx.fillStyle=config.hairColorHex;ctx.fill();}
+        ctx.globalAlpha=.9;ctx.strokeStyle=tint?'#f472b6':'#22d3ee';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+      }
+      if(!tint)for(const face of a.faces||[]){const x=(1-face.x-face.width)*c.width,y=face.y*c.height,w=face.width*c.width,h=face.height*c.height;ctx.strokeStyle='#f472b6';ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);}
+    };
+    draw(overlayRef.current,false);draw(afterOverlayRef.current,true);
   },[liveAnalysis,config.hairColorHex]);
 
   const hairstyles = [
@@ -197,14 +207,11 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
                 </span>
               </div>
               <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group">
-                {isCameraActive ? <video autoPlay playsInline muted ref={(el)=>{if(el&&videoRef.current?.srcObject&&el.srcObject!==videoRef.current.srcObject){el.srcObject=videoRef.current.srcObject;el.play().catch(()=>{});}}} className="absolute inset-0 w-full h-full object-cover -scale-x-100"/> :
+                {isCameraActive ? <><video autoPlay playsInline muted ref={(el)=>{if(el&&videoRef.current?.srcObject&&el.srcObject!==videoRef.current.srcObject){el.srcObject=videoRef.current.srcObject;el.play().catch(()=>{});}}} className="absolute inset-0 w-full h-full object-cover -scale-x-100"/><canvas ref={afterOverlayRef} width={720} height={960} className="absolute inset-0 w-full h-full object-cover"/></> :
                 <img src={selectedModel.imageUrl} alt="Virtual Salon Look" className="w-full h-full object-cover" style={{filter:'hue-rotate(15deg) saturate(1.1)'}} />}
 
                 {/* Hair Tint Color Filter Overlay */}
-                <div 
-                  className="absolute inset-0 mix-blend-color opacity-35 pointer-events-none transition-colors duration-300"
-                  style={{ backgroundColor: config.hairColorHex }}
-                />
+                {!isCameraActive && <div className="absolute inset-0 mix-blend-color opacity-20 pointer-events-none transition-colors duration-300" style={{ backgroundColor: config.hairColorHex }} />}
 
                 <div className="absolute bottom-3 left-3 right-3 bg-slate-950/90 backdrop-blur-md p-2 rounded-xl border border-slate-800">
                   <div className="flex items-center justify-between">
