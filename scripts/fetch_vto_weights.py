@@ -1,178 +1,264 @@
 """Fetch (or diagnose) the weights the photorealistic try-on engine needs.
 
-Model weights are not served from the same host as the Hugging Face API. The
-API lives on huggingface.co, but every actual file download is redirected to a
-separate CDN. Those two can fail independently, and on a restricted network
-the usual symptom is confusing: metadata loads fine, then the download dies
-with an SSL error partway through pipeline construction.
+Model weights are not served from the same host as the model-hub API. The API
+lives on huggingface.co, but every actual file download is redirected to a
+separate CDN, and those two can fail independently. On a restricted network
+the symptom is confusing: metadata loads fine, then the download dies with an
+SSL error partway through pipeline construction, which reads like a code fault
+and is not one.
 
-This script separates the two, so a failure says which hop is broken:
-
-    python scripts/fetch_vto_weights.py --check      # what is already cached
-    python scripts/fetch_vto_weights.py --diagnose   # which hop is reachable
+    python scripts/fetch_vto_weights.py --diagnose   # which hosts serve bytes
+    python scripts/fetch_vto_weights.py --check      # what is already on disk
     python scripts/fetch_vto_weights.py              # download what is missing
 
-If the CDN is unreachable from the store's network, weights can be fetched on
-any other machine and copied across - see --check output for the cache path.
+Two sources are supported. ``huggingface`` is the upstream. ``modelscope`` is
+a mirror of the same two repositories, reachable from networks where the
+Hugging Face CDN is not; ``--source auto`` (the default) probes and picks one.
+
+Weights land in a plain directory, not a hub cache, so the engine can be
+pointed at them with two environment variables and loads fully offline:
+
+    FITAI_VTO_BASE_MODEL=<dest>/stable-diffusion-inpainting
+    FITAI_VTO_IP_ADAPTER_REPO=<dest>/IP-Adapter
+    FITAI_VTO_IP_ADAPTER_WEIGHT=ip-adapter-plus_sd15.safetensors
+
+The fp16 variants are downloaded and stored under the plain filenames the
+pipeline looks for. That halves the download and matches the precision the
+engine runs in anyway.
 """
 
 from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 import time
+from pathlib import Path
 
-# Files the diffusers-inpaint engine loads. fp16 variants are used because the
-# engine runs in half precision on GPU.
-REQUIRED = [
-    ("runwayml/stable-diffusion-inpainting", "model_index.json"),
-    ("runwayml/stable-diffusion-inpainting", "scheduler/scheduler_config.json"),
-    ("runwayml/stable-diffusion-inpainting", "tokenizer/vocab.json"),
-    ("runwayml/stable-diffusion-inpainting", "tokenizer/merges.txt"),
-    ("runwayml/stable-diffusion-inpainting", "tokenizer/tokenizer_config.json"),
-    ("runwayml/stable-diffusion-inpainting", "tokenizer/special_tokens_map.json"),
-    ("runwayml/stable-diffusion-inpainting", "text_encoder/config.json"),
-    ("runwayml/stable-diffusion-inpainting", "text_encoder/model.fp16.safetensors"),
-    ("runwayml/stable-diffusion-inpainting", "vae/config.json"),
-    ("runwayml/stable-diffusion-inpainting", "vae/diffusion_pytorch_model.fp16.safetensors"),
-    ("runwayml/stable-diffusion-inpainting", "unet/config.json"),
-    ("runwayml/stable-diffusion-inpainting", "unet/diffusion_pytorch_model.fp16.safetensors"),
-    ("h94/IP-Adapter", "models/image_encoder/config.json"),
-    ("h94/IP-Adapter", "models/image_encoder/model.safetensors"),
-    ("h94/IP-Adapter", "models/ip-adapter-plus_sd15.bin"),
+import requests
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DEST = REPO_ROOT / "backend" / "vto" / "weights"
+
+# (remote path, local path). Remote fp16 variants are stored under the plain
+# name so from_pretrained finds them without variant="fp16".
+SD_FILES = [
+    ("model_index.json", "model_index.json"),
+    ("scheduler/scheduler_config.json", "scheduler/scheduler_config.json"),
+    ("feature_extractor/preprocessor_config.json", "feature_extractor/preprocessor_config.json"),
+    ("tokenizer/vocab.json", "tokenizer/vocab.json"),
+    ("tokenizer/merges.txt", "tokenizer/merges.txt"),
+    ("tokenizer/tokenizer_config.json", "tokenizer/tokenizer_config.json"),
+    ("tokenizer/special_tokens_map.json", "tokenizer/special_tokens_map.json"),
+    ("text_encoder/config.json", "text_encoder/config.json"),
+    ("text_encoder/model.fp16.safetensors", "text_encoder/model.safetensors"),
+    ("vae/config.json", "vae/config.json"),
+    ("vae/diffusion_pytorch_model.fp16.safetensors", "vae/diffusion_pytorch_model.safetensors"),
+    ("unet/config.json", "unet/config.json"),
+    ("unet/diffusion_pytorch_model.fp16.safetensors", "unet/diffusion_pytorch_model.safetensors"),
 ]
 
-API_HOST = os.getenv("HF_ENDPOINT", "https://huggingface.co")
+IPA_FILES = [
+    ("models/ip-adapter-plus_sd15.safetensors", "models/ip-adapter-plus_sd15.safetensors"),
+    ("models/image_encoder/config.json", "models/image_encoder/config.json"),
+    ("models/image_encoder/model.safetensors", "models/image_encoder/model.safetensors"),
+]
+
+# source -> {local model dir: remote repo id}
+REPOS = {
+    "huggingface": {
+        "stable-diffusion-inpainting": "runwayml/stable-diffusion-inpainting",
+        "IP-Adapter": "h94/IP-Adapter",
+    },
+    "modelscope": {
+        "stable-diffusion-inpainting": "AI-ModelScope/stable-diffusion-inpainting",
+        "IP-Adapter": "AI-ModelScope/IP-Adapter",
+    },
+}
+
+PLAN = [("stable-diffusion-inpainting", SD_FILES), ("IP-Adapter", IPA_FILES)]
+
+SESSION = requests.Session()
+SESSION.headers["User-Agent"] = "Mozilla/5.0 (FitAI weight fetcher)"
 
 
-def cache_root() -> str:
-    from huggingface_hub.constants import HF_HUB_CACHE
-    return HF_HUB_CACHE
+def url_for(source: str, repo: str, path: str) -> str:
+    if source == "huggingface":
+        endpoint = os.getenv("HF_ENDPOINT", "https://huggingface.co")
+        return f"{endpoint}/{repo}/resolve/main/{path}"
+    return (f"https://modelscope.cn/api/v1/models/{repo}/repo"
+            f"?Revision=master&FilePath={path}")
 
 
-def check() -> int:
-    """Report which required files are already on disk."""
-    from huggingface_hub import try_to_load_from_cache
+# --------------------------------------------------------------------------- #
+# probing
+# --------------------------------------------------------------------------- #
 
-    print(f"cache: {cache_root()}\n")
-    missing = 0
-    for repo, filename in REQUIRED:
-        path = try_to_load_from_cache(repo_id=repo, filename=filename)
-        if isinstance(path, str) and os.path.exists(path):
-            size = os.path.getsize(path) / 1024 ** 2
-            print(f"  present  {size:8.1f} MB  {repo}  {filename}")
-        else:
-            missing += 1
-            print(f"  MISSING              {repo}  {filename}")
+def serves_bytes(source: str, timeout: int = 35) -> tuple[bool, str]:
+    """True only if real bytes of a real weight file arrive.
 
-    print()
+    A 200 on metadata, or a redirect, proves nothing about the transfer hop -
+    that is exactly the trap this whole script exists to avoid.
+    """
+    repo = REPOS[source]["stable-diffusion-inpainting"]
+    url = url_for(source, repo, "vae/diffusion_pytorch_model.fp16.safetensors")
+    try:
+        started = time.perf_counter()
+        r = SESSION.get(url, timeout=timeout, stream=True,
+                        headers={"Range": "bytes=0-1048575"})
+        got = len(next(r.iter_content(1 << 20), b""))
+        elapsed = time.perf_counter() - started
+        host = r.url.split("/")[2]
+        r.close()
+        if got > 4096:
+            return True, f"{r.status_code}  {got/1024:.0f} KB in {elapsed:.1f}s via {host}"
+        return False, f"{r.status_code} but no payload (via {host})"
+    except Exception as exc:
+        return False, f"{type(exc).__name__}: {str(exc)[:110]}"
+
+
+def pick_source(requested: str) -> str:
+    if requested != "auto":
+        return requested
+    for source in ("huggingface", "modelscope"):
+        ok, detail = serves_bytes(source, timeout=25)
+        print(f"  {source:12s} {'serves weights' if ok else 'unusable'}: {detail}", flush=True)
+        if ok:
+            print(f"\nusing {source}\n", flush=True)
+            return source
+    raise SystemExit(
+        "\nNo source can deliver weight bytes from this network.\n"
+        "The model-hub API and its file CDN are different hosts. If only the CDN\n"
+        "failed, the fix is in network or proxy routing, not in FitAI. Otherwise\n"
+        "fetch the weights on another machine and copy the destination directory."
+    )
+
+
+# --------------------------------------------------------------------------- #
+# commands
+# --------------------------------------------------------------------------- #
+
+def download_file(source: str, repo: str, remote: str, target: Path) -> int:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    part = target.with_suffix(target.suffix + ".part")
+
+    with SESSION.get(url_for(source, repo, remote), timeout=60, stream=True) as r:
+        r.raise_for_status()
+        total = int(r.headers.get("Content-Length") or 0)
+        written = 0
+        last = time.perf_counter()
+        with open(part, "wb") as fh:
+            for chunk in r.iter_content(1 << 20):
+                fh.write(chunk)
+                written += len(chunk)
+                now = time.perf_counter()
+                if total > (8 << 20) and now - last > 5:
+                    pct = 100 * written / total if total else 0
+                    print(f"        {written/1024**2:8.0f} / {total/1024**2:.0f} MB "
+                          f"({pct:4.1f}%)", flush=True)
+                    last = now
+    part.replace(target)
+    return written
+
+
+def download(source: str, dest: Path) -> int:
+    source = pick_source(source)
+    print(f"destination: {dest}\n", flush=True)
+
+    failed = []
+    for model_dir, files in PLAN:
+        repo = REPOS[source][model_dir]
+        print(f"{model_dir}  <-  {source}:{repo}", flush=True)
+        for remote, local in files:
+            target = dest / model_dir / local
+            if target.exists() and target.stat().st_size > 0:
+                print(f"  have  {local}  ({target.stat().st_size/1024**2:.1f} MB)", flush=True)
+                continue
+            try:
+                started = time.perf_counter()
+                size = download_file(source, repo, remote, target)
+                elapsed = max(time.perf_counter() - started, 0.01)
+                print(f"  got   {local}  ({size/1024**2:.1f} MB, "
+                      f"{size/1024**2/elapsed:.1f} MB/s)", flush=True)
+            except Exception as exc:
+                failed.append((model_dir, local, f"{type(exc).__name__}: {str(exc)[:120]}"))
+                print(f"  FAIL  {local}\n        {failed[-1][2]}", flush=True)
+        print(flush=True)
+
+    if failed:
+        print(f"{len(failed)} file(s) failed. Re-run to resume; completed files are kept.")
+        return 2
+
+    print("All weights present. Point the engine at them:\n")
+    print(f'  set FITAI_VTO_BASE_MODEL={dest / "stable-diffusion-inpainting"}')
+    print(f'  set FITAI_VTO_IP_ADAPTER_REPO={dest / "IP-Adapter"}')
+    print(f'  set FITAI_VTO_IP_ADAPTER_WEIGHT=ip-adapter-plus_sd15.safetensors')
+    return 0
+
+
+def check(dest: Path) -> int:
+    print(f"destination: {dest}\n")
+    missing = total = 0
+    for model_dir, files in PLAN:
+        print(f"{model_dir}")
+        for _, local in files:
+            target = dest / model_dir / local
+            if target.exists() and target.stat().st_size > 0:
+                size = target.stat().st_size
+                total += size
+                print(f"  present  {size/1024**2:9.1f} MB  {local}")
+            else:
+                missing += 1
+                print(f"  MISSING                {local}")
+        print()
+
+    print(f"{total/1024**3:.2f} GB on disk, {missing} file(s) missing")
     if missing:
-        print(f"{missing} file(s) missing. Run this script without --check to fetch them,")
-        print("or copy the cache directory above from a machine that can reach the CDN.")
-    else:
-        print("All weights present. The try-on engine can load offline.")
+        print("Run without --check to fetch them, or copy this directory from a")
+        print("machine that can reach a model hub.")
     return 1 if missing else 0
 
 
 def diagnose() -> int:
-    """Probe the API host and the file CDN separately."""
-    import requests
-
-    print(f"API endpoint: {API_HOST}")
-    print(f"proxies     : {requests.utils.getproxies() or 'none'}\n")
-
-    ok = True
-
-    try:
-        r = requests.get(f"{API_HOST}/api/models/runwayml/stable-diffusion-inpainting",
-                         timeout=20)
-        print(f"  api host      -> {r.status_code}")
-    except Exception as exc:
-        ok = False
-        print(f"  api host      -> {type(exc).__name__}: {str(exc)[:120]}")
-
-    # The CDN hop: ask for one megabyte of a real weight file and see if bytes
-    # actually arrive. A redirect alone proves nothing.
-    url = (f"{API_HOST}/runwayml/stable-diffusion-inpainting/resolve/main/"
-           f"vae/diffusion_pytorch_model.fp16.safetensors")
-    try:
-        started = time.perf_counter()
-        r = requests.get(url, timeout=40, stream=True, headers={"Range": "bytes=0-1048575"})
-        got = len(next(r.iter_content(1 << 20), b""))
-        elapsed = time.perf_counter() - started
-        r.close()
-        if got:
-            print(f"  weight CDN    -> {r.status_code}  {got/1024:.0f} KB in {elapsed:.1f}s")
-            print(f"                   host: {r.url.split('/')[2]}")
-        else:
-            ok = False
-            print(f"  weight CDN    -> {r.status_code} but no bytes arrived")
-    except Exception as exc:
-        ok = False
-        print(f"  weight CDN    -> {type(exc).__name__}: {str(exc)[:120]}")
-
+    print(f"proxies: {requests.utils.getproxies() or 'none'}\n")
+    any_ok = False
+    for source in ("huggingface", "modelscope"):
+        ok, detail = serves_bytes(source)
+        any_ok |= ok
+        print(f"  {source:12s} {'OK  ' if ok else 'FAIL'}  {detail}")
     print()
-    if ok:
-        print("Both hops work. Run this script without arguments to download.")
-    else:
-        print("The API host and the weight CDN are different hosts and are blocked")
-        print("independently. If only the CDN failed, the fix is in the network or")
-        print("proxy routing, not in FitAI: make sure *.hf.co and *.xethub.hf.co go")
-        print("through the same tunnel as huggingface.co. Otherwise fetch the weights")
-        print("elsewhere and copy the cache directory shown by --check.")
-    return 0 if ok else 2
-
-
-def download() -> int:
-    from huggingface_hub import hf_hub_download
-
-    print(f"cache: {cache_root()}")
-    print(f"endpoint: {API_HOST}\n")
-
-    failed = []
-    for index, (repo, filename) in enumerate(REQUIRED, 1):
-        label = f"[{index}/{len(REQUIRED)}] {repo} {filename}"
-        try:
-            started = time.perf_counter()
-            path = hf_hub_download(repo_id=repo, filename=filename)
-            size = os.path.getsize(path) / 1024 ** 2
-            elapsed = time.perf_counter() - started
-            print(f"  ok   {label}  ({size:.1f} MB in {elapsed:.1f}s)", flush=True)
-        except Exception as exc:
-            failed.append((repo, filename, f"{type(exc).__name__}: {str(exc)[:160]}"))
-            print(f"  FAIL {label}\n       {failed[-1][2]}", flush=True)
-
-    print()
-    if failed:
-        print(f"{len(failed)} file(s) could not be downloaded.")
-        print("Run --diagnose to see which network hop is failing.")
-        return 2
-    print("All weights downloaded. Try it:")
-    print("  python -m backend.vto.runner --person me.jpg --garment shirt.png --output out.png")
-    return 0
+    if any_ok:
+        print("At least one source serves weight bytes. Run without arguments.")
+        return 0
+    print("Neither source delivered bytes. The API host and the file CDN are")
+    print("different hosts and are blocked independently; if metadata loads but")
+    print("downloads do not, the fix is in network or proxy routing, not in FitAI.")
+    return 2
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--check", action="store_true", help="report what is already cached")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--source", choices=["auto", "huggingface", "modelscope"],
+                        default="auto", help="where to download from (default: probe both)")
+    parser.add_argument("--dest", type=Path, default=DEFAULT_DEST,
+                        help=f"destination directory (default: {DEFAULT_DEST})")
+    parser.add_argument("--check", action="store_true", help="report what is already on disk")
     parser.add_argument("--diagnose", action="store_true",
-                        help="probe the API host and the weight CDN separately")
+                        help="probe each source for real weight bytes")
     args = parser.parse_args(argv)
 
-    try:
-        import huggingface_hub  # noqa: F401
-    except ImportError:
-        print("huggingface_hub is not installed.", file=sys.stderr)
-        print("Install backend/requirements-vto.txt first.", file=sys.stderr)
-        return 3
-
-    if args.check:
-        return check()
     if args.diagnose:
         return diagnose()
-    return download()
+    if args.check:
+        return check(args.dest)
+
+    free = shutil.disk_usage(args.dest.parent if args.dest.exists() else REPO_ROOT).free
+    if free < 6 * 1024 ** 3:
+        print(f"warning: only {free/1024**3:.1f} GB free; about 4.6 GB is needed\n",
+              file=sys.stderr)
+    return download(args.source, args.dest)
 
 
 if __name__ == "__main__":
