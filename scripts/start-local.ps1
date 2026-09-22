@@ -66,6 +66,19 @@ $backendCommand = '$env:PYTHONUNBUFFERED="1"; & "' + $venvPython + '" -m uvicorn
 Write-Host "Starting backend: http://127.0.0.1:8000" -ForegroundColor Green
 Start-Process powershell -WorkingDirectory $ProjectRoot -ArgumentList "-NoExit","-Command",$backendCommand
 
-Start-Sleep -Seconds 2
+Write-Host "Waiting for backend health check..." -ForegroundColor Cyan
+$backendReady = $false
+for ($i = 0; $i -lt 20; $i++) {
+    Start-Sleep -Milliseconds 500
+    try {
+        $health = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/health" -TimeoutSec 2
+        if ($health.status -eq "ok") { $backendReady = $true; break }
+    } catch {}
+}
+if (-not $backendReady) {
+    Write-Host "Backend did not become healthy. Check the backend PowerShell window above for the real Python error." -ForegroundColor Red
+    throw "FitAI backend health check failed; frontend was not started."
+}
+Write-Host ("Backend ONLINE: " + $health.backend + " v" + $health.version) -ForegroundColor Green
 Write-Host "Starting frontend..." -ForegroundColor Green
 npm run dev
