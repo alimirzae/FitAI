@@ -18,3 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m py_compile backend/app/main.py backend/app/services/person_analyzer.py backend/app/services/camera_service.py
+      # The try-on geometry, pipeline and measurement suites run on
+      # numpy + Pillow only: no GPU, no model weights, no camera.
+      - run: python -m pip install numpy Pillow pytest
+      - run: python -m pytest backend/tests -q
