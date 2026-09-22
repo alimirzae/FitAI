@@ -7,14 +7,14 @@ from .services.camera_service import mjpeg_stream
 from .services.system_info import get_system_info
 
 logger=logging.getLogger("fitai")
-app=FastAPI(title="FitAI Local AI Runtime",version="0.5.0")
+app=FastAPI(title="FitAI Local AI Runtime",version="0.5.1")
 app.add_middleware(CORSMiddleware,allow_origins=["http://localhost:3000","http://127.0.0.1:3000"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
 logger.info("Initializing FitAI MediaPipe analyzer")
 analyzer=PersonAnalyzer()
 
 @app.get("/api/v1/health")
 def health():
-    return {"status":"ok","backend":"mediapipe-opencv-cpu","version":"0.5.0","capabilities":{"pose":True,"segmentation":True,"face_detection":True,"face_mesh":True,"hair_semantic_segmentation":False,"pose_aware_ar_garment":True,"person_mask_png":True,"hairstyle_synthesis":False}}
+    return {"status":"ok","backend":"mediapipe-opencv-cpu","version":"0.5.1","capabilities":{"pose":True,"segmentation":True,"face_detection":True,"face_mesh":True,"hair_semantic_segmentation":False,"pose_aware_ar_garment":True,"live_hair_recolor":True,"hairstyle_synthesis":False}}
 
 @app.get("/api/v1/system")
 def system(): return get_system_info()
