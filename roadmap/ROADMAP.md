@@ -13,9 +13,14 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - DONE real face detection
 - DONE normalized shoulder/hip/body geometry
 - DONE CPU fallback suitable for 16 GB RAM / Quadro P1000 4 GB
-- PROTOTYPE Canvas garment overlay
+- DONE pose-aware articulated AR garment baseline (real shoulder/hip/elbow/wrist tracking)
+- TODO transparent isolated garment assets + alpha masks
+- TODO piecewise affine/TPS garment warp
 - PROTOTYPE body slim/fit visualization
-- PROTOTYPE salon/hair UI
+- DONE live Salon camera + face detection + Face Mesh geometry
+- PROTOTYPE Face-Mesh-guided scalp/hair-region color preview
+- TODO semantic pixel-level hair segmentation
+- TODO production hairstyle synthesis
 - TODO metric anthropometry in centimeters
 - TODO face identity/returning-customer recognition
 - TODO production virtual try-on model
@@ -25,7 +30,7 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 ## Phase 1 — Local vision runtime
 - DONE MediaPipe pose + segmentation provider
 - DONE frame analysis client for browser camera
-- TODO wire real landmarks into every live try-on view
+- DONE wire real landmarks into live fitting-room and Salon views
 - TODO temporal landmark smoothing and adaptive inference interval
 - TODO foreground mask endpoint (PNG/WebP alpha)
 - TODO camera device enumeration and configurable camera index
@@ -56,6 +61,9 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - TODO memory-pressure guard and automatic unload
 
 ## Phase 4 — Virtual try-on
+- DONE articulated 2D pose-aware AR baseline
+- TODO garment asset contract: isolated transparent garment + mask
+- TODO piecewise affine/TPS warp before heavy generative VTO
 - TODO evaluate commercially usable checkpoints independently from source-code licenses
 - TODO garment segmentation/preprocessing
 - TODO asynchronous try-on job API
