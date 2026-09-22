@@ -29,6 +29,21 @@ from the original photograph. Diffusion decoders shift colour across the whole
 frame; without this step the customer's face and skin tone come back subtly
 wrong.
 
+## Weights
+
+    python scripts/fetch_vto_weights.py --check      # what is already cached
+    python scripts/fetch_vto_weights.py --diagnose   # which network hop works
+    python scripts/fetch_vto_weights.py              # download what is missing
+
+The Hugging Face API and the file CDN are different hosts and fail
+independently. On a restricted network the symptom is confusing: metadata
+loads, then the download dies with an SSL error partway through building the
+pipeline. `--diagnose` separates the two hops so the answer is unambiguous.
+
+If the CDN is blocked where the store is, fetch the weights on any other
+machine and copy the cache directory that `--check` prints. The engine loads
+entirely offline once they are present.
+
 ## Engines
 
     python -m backend.vto.runner --status

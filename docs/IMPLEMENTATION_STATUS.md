@@ -77,13 +77,40 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
   suggestion. Centimetres stay `None` until a known-height calibration is done,
   per the PROJECT_MEMORY truthfulness rule.
 - 39 tests run in CI on numpy + Pillow only: no GPU, no weights, no camera.
-- NOT VERIFIED ON HARDWARE: no generated image has been produced yet. torch,
-  diffusers, mediapipe, Node and the model weights are not installed on the
-  development machine, and its Python is 3.10 while the backend requires
-  3.11/3.12. The geometry, pipeline wiring and failure paths are tested with a
-  stub engine; the generator itself still needs a first real run.
 - CORRECTION: the development machine's GPU is an RTX 4060 Laptop (8 GB), not
   the Quadro P1000 4 GB recorded earlier. 8 GB changes what is feasible locally.
+
+## Try-on verified against a real photograph — 2026-09-22
+Run on Python 3.10 + mediapipe 0.10.20 + torch 2.5.1+cu121, RTX 4060 8 GB.
+
+RUNNABLE, verified on an actual person photo:
+- MediaPipe pose on a real photo: 33 landmarks, 28 clearly visible.
+- Agnostic mask for all three categories: torso/sleeves for `upper` stopping at
+  the neck line, the full flared skirt for `lower`, neck-down for `overall`.
+  Face and hair untouched in every category.
+- Metric measurement correctly WITHHELD height because the subject's feet were
+  outside the frame, which is the intended behaviour.
+- 41 CPU-only tests green.
+
+Two real bugs were found by that run and fixed; neither was visible against
+the synthetic reference pose:
+- MediaPipe `model_complexity=2` aborts with an access violation (0xC0000005)
+  on mediapipe 0.10.20 / Windows. Default is now complexity 1, overridable via
+  `FITAI_POSE_COMPLEXITY`. This also means the launcher's Python 3.11/3.12
+  requirement should NOT be relaxed on the basis that pose works on 3.10.
+- The mask was built from the skeleton alone and missed a flared skirt's real
+  hem, so the old garment would have survived the repaint. The segmentation
+  silhouette is now unioned in, with pose deciding only which part of it the
+  category owns.
+
+STILL NOT VERIFIED: image generation. The weights could not be downloaded on
+this network. `huggingface.co` is reachable, but every LFS download redirects
+to `us.aws.cdn.hf.co`, which refuses the TLS connection - direct, through the
+configured proxy at 127.0.0.1:10808, and under both OpenSSL (Python) and
+schannel (curl). `hf-mirror.com` serves metadata but not LFS either. This is a
+network reachability problem, not a code problem; `scripts/fetch_vto_weights.py
+--diagnose` reports which hop fails, and `--check` prints the cache directory
+so weights can be fetched elsewhere and copied in.
 
 ## Runtime resilience hotfix — 2026-09-22
 - Removed per-frame base64 segmentation PNG from the 8 Hz analysis response; pose/face live transport is lightweight again.
