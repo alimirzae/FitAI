@@ -33,3 +33,11 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - Existing Unsplash catalog photos are reference/product photos, not transparent garment masks; their texture overlay is intentionally low-opacity.
 - Salon now supports the shared live camera and real face detection. Current hair color overlay is a geometric preview only, not HairFast-GAN/generative hair synthesis.
 - Production garment VTO requires garment preprocessing/masks or a reviewed VTON provider. Production hairstyle transfer requires a reviewed hair synthesis provider.
+
+
+## Appearance step 2 — 2026-09-22
+- Live garment baseline now articulates torso and sleeves from real shoulder/hip/elbow/wrist landmarks.
+- Full-person catalog photos are not painted onto the body; transparent garment assets/masks are the next asset requirement.
+- Salon uses real MediaPipe Face Mesh. Hair color preview follows upper-face/scalp geometry instead of the old forehead ellipse.
+- Hair preview is NOT semantic hair segmentation and NOT generative hairstyle synthesis.
+- CatVTON/face identity registry entries are no longer shown as active runtime capabilities without implementation/verification.
