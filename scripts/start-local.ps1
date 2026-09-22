@@ -62,7 +62,7 @@ if (!(Test-Path (Join-Path $ProjectRoot "node_modules"))) {
     if ($LASTEXITCODE -ne 0) { throw "npm install failed." }
 }
 
-$backendCommand = "& '$venvPython' -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000"
+$backendCommand = "$env:PYTHONUNBUFFERED='1'; & '$venvPython' -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --log-level debug --access-log"
 Write-Host "Starting backend: http://127.0.0.1:8000" -ForegroundColor Green
 Start-Process powershell -WorkingDirectory $ProjectRoot -ArgumentList "-NoExit","-Command",$backendCommand
 

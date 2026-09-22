@@ -34,6 +34,8 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   const [showWireframe, setShowWireframe] = useState<boolean>(true);
   const [runtimeLandmarks, setRuntimeLandmarks] = useState<PoseLandmark[]>([]);
   const [aiOnline, setAiOnline] = useState<boolean>(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLatency, setAiLatency] = useState<number | null>(null);
 
   // Real local inference loop. Rendering remains 60 FPS while inference is throttled
   // for CPU-friendly operation on the target P1000 workstation.
@@ -50,9 +52,12 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
         if (!cancelled) {
           setRuntimeLandmarks(result.landmarks || []);
           setAiOnline(true);
+          setAiError(null);
+          setAiLatency(result.latency_ms);
         }
-      } catch {
-        if (!cancelled) setAiOnline(false);
+      } catch (error: any) {
+        console.error('[FitAI] LIVE_INFERENCE_FAILED', error);
+        if (!cancelled) { setAiOnline(false); setAiError(error?.message || String(error)); }
       } finally { busy = false; }
     }, 125);
     return () => { cancelled = true; window.clearInterval(timer); };
@@ -254,7 +259,9 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             <span className="text-cyan-400 font-bold">{fps} FPS</span>
             <span className={aiOnline ? 'text-emerald-400' : 'text-rose-400'}>{aiOnline ? 'AI REAL' : 'AI OFFLINE'}</span>
             <span className="text-slate-500">|</span>
-            <span className="text-amber-400">{cpuLatencyMs}ms CPU</span>
+            <span className="text-amber-400">{cpuLatencyMs}ms render</span>
+            <span className="text-cyan-400">{aiLatency === null ? '--' : aiLatency + 'ms AI'}</span>
+          {aiError && <span className="max-w-[220px] truncate text-rose-300" title={aiError}>{aiError}</span>}
           </div>
 
           <button
