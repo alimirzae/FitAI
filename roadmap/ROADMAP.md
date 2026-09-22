@@ -94,3 +94,7 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 
 ## Definition of DONE
 A feature is DONE only when a real implementation exists, can be executed from a clean clone, and has no fabricated inference values in its production path.
+
+- DONE resilient garment fallback: local garment remains visible if an inference request temporarily fails; real pose takes over automatically when API recovers
+- DONE MediaPipe inference serialization for concurrent live/salon access
+- DONE live hair-color preview preserving camera texture; photorealistic hairstyle synthesis remains TODO
