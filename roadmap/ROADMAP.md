@@ -32,7 +32,22 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - TODO benchmark command with FPS/latency/RAM report
 - TODO automated tests for image, camera and API contracts
 
-## Phase 2 — P1000 optimization
+## Phase 2 — Camera abstraction and RGB-D expansion
+- CURRENT reference input: laptop/USB RGB webcam through OpenCV/browser camera
+- TODO define ICameraProvider / unified frame contract
+- TODO OpenCVCameraProvider for explicit device enumeration/configuration
+- TODO KinectV2CameraProvider for Xbox One Kinect using Microsoft Kinect for Windows SDK 2.0 on Windows
+- TODO expose Kinect RGB + depth + calibration/body-space mapping without coupling AI modules to Kinect SDK types
+- TODO optional Kinect body/skeleton data adapter for comparison/fusion with FitAI pose
+- TODO depth-assisted foreground segmentation and person distance
+- TODO depth-assisted metric anthropometry/calibration experiments
+- TODO synchronized RGB/depth frame timestamps
+- TODO generic RGBDFrame contract for future RGB-D devices
+- TODO future providers for other RGB-D cameras behind the same abstraction
+- TODO camera capability flags: rgb, depth, calibration, hardware_body_tracking, fps, resolution
+- TODO preserve RGB-only operation: no RGB-D SDK may become a mandatory core dependency
+
+## Phase 3 — P1000 optimization
 - TODO optional ONNX Runtime provider
 - TODO CUDA provider detection with safe CPU fallback
 - TODO model registry with VRAM estimates
@@ -40,21 +55,21 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - TODO 512/640 inference profiles for 4 GB VRAM
 - TODO memory-pressure guard and automatic unload
 
-## Phase 3 — Virtual try-on
+## Phase 4 — Virtual try-on
 - TODO evaluate commercially usable checkpoints independently from source-code licenses
 - TODO garment segmentation/preprocessing
 - TODO asynchronous try-on job API
 - TODO identity/texture/logo preservation benchmarks
 - TODO P1000-compatible low-memory path; otherwise allow remote GPU worker without changing API
 
-## Phase 4 — Product and store integration
+## Phase 5 — Product and store integration
 - TODO Generic REST product provider
 - TODO CSV provider
 - TODO iMonitor adapter
 - TODO product/variant/color/size normalization
 - TODO local offline cache
 
-## Phase 5 — Production
+## Phase 6 — Production
 - TODO SQLite/PostgreSQL persistence
 - TODO sessions/events
 - TODO admin runtime/model health

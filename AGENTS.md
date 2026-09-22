@@ -10,3 +10,7 @@
 8. Update roadmap, memory and implementation status with every meaningful capability change.
 9. Prefer small testable commits.
 10. A clean clone must remain installable and runnable.
+
+11. Until the camera-abstraction milestone is implemented, use the laptop/standard RGB webcam as the reference input.
+12. Kinect v2 and future RGB-D support must be optional providers. Never leak vendor SDK types into core AI/domain APIs.
+13. Any RGB-D provider must normalize data into FitAI RGB/depth/calibration capability contracts and preserve RGB-only fallback.

@@ -23,3 +23,10 @@ Canvas garment overlay is a prototype, not generative virtual try-on. A producti
 
 ## Agent workflow
 Before changing AI: read README, memory, roadmap, architecture and model-license matrix; inspect current provider; preserve CPU fallback; update capability flags; add tests; update docs/memory/roadmap in the same change.
+
+## Camera strategy — 2026-09-22
+Current development must continue with the laptop/standard RGB webcam. The user also owns an Xbox One Kinect (Kinect v2), which is a planned Windows RGB-D provider using Microsoft Kinect for Windows SDK 2.0. Do not make Kinect SDK a required dependency yet.
+
+Architecture must evolve toward an ICameraProvider / UnifiedFrame abstraction. Unified frames may contain RGB plus optional depth, calibration/intrinsics and hardware body data. AI/person/try-on modules must never depend directly on Kinect SDK classes. This allows future RGB-D cameras to be added as providers.
+
+Planned Kinect/RGB-D uses include person distance, depth-assisted segmentation, calibration, improved body geometry/metric measurement research and optional skeleton fusion. RGB webcam mode must always remain supported.

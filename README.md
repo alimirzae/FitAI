@@ -9,6 +9,42 @@
 
 ---
 
+---
+
+# Quick Start — Windows
+
+Current reference camera: **built-in laptop webcam / standard USB RGB webcam**. Kinect v2 and other RGB-D cameras are planned providers and are intentionally not required by the current installation.
+
+Prerequisites: Git, Python 3.11, Node.js 20+.
+
+## Clone / first install
+
+```powershell
+git clone https://github.com/alimirzae/FitAI.git
+cd FitAI
+powershell -ExecutionPolicy Bypass -File scripts\\run-local.ps1
+```
+
+The script creates the Python virtual environment, installs backend requirements, installs npm dependencies when needed, and starts the local services.
+
+## Update an existing clone
+
+```powershell
+cd FitAI
+git pull origin main
+powershell -ExecutionPolicy Bypass -File scripts\\run-local.ps1
+```
+
+Default local addresses:
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://127.0.0.1:8000`
+- API documentation: `http://127.0.0.1:8000/docs`
+- Health: `http://127.0.0.1:8000/api/v1/health`
+
+If the browser asks for camera permission, allow access to the laptop webcam.
+
+
 # 1. Vision
 
 Fit AI is an intelligent computer-vision and generative-AI platform for changing, evaluating and recommending a person's visual appearance.

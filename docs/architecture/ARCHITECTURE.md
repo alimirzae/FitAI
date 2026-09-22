@@ -23,3 +23,28 @@ Analyze camera at a lower inference rate than display FPS; reuse/smooth landmark
 
 ## Privacy
 Raw camera frames are ephemeral by default. Identity recognition is optional and must never be required for fitting-room operation.
+
+## Camera provider architecture
+The current reference implementation is RGB-only and uses the laptop/USB webcam. Camera acquisition will be abstracted before RGB-D implementation.
+
+```text
+ICameraProvider
+  |-- LaptopWebcam / OpenCV RGB
+  |-- Kinect v2 / Xbox One (future)
+  |-- Other RGB-D providers (future)
+        |
+        v
+UnifiedFrame
+  rgb: required
+  depth: optional
+  calibration: optional
+  hardware_body: optional
+  timestamp: required
+        |
+        v
+Person Understanding / VTON / Body / Salon
+```
+
+Kinect v2 integration is planned for Windows through Microsoft Kinect for Windows SDK 2.0. SDK-specific objects must be converted at the provider boundary. Core services consume only FitAI DTOs. Future RGB-D devices must reuse the same contracts.
+
+RGB-D is an enhancement, not a prerequisite: clean installation and normal operation must remain possible with a standard webcam only.
