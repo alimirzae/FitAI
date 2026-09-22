@@ -1,0 +1,29 @@
+{
+  "_readme": [
+    "Garments offered by the photorealistic try-on screen.",
+    "",
+    "IMPORTANT: 'image' must be an ISOLATED product photo of the garment alone",
+    "- a flat lay or ghost-mannequin shot on a plain background. A photo of a",
+    "model wearing the item is NOT a garment asset: the generator would try to",
+    "transfer the model's body along with the clothing, and the result looks",
+    "wrong. The Unsplash URLs in src/data/catalog.ts are full-person reference",
+    "photography and are deliberately not listed here.",
+    "",
+    "'category' selects which part of the customer is repainted:",
+    "  upper   - shirts, t-shirts, jackets, knitwear",
+    "  lower   - trousers, jeans, skirts",
+    "  overall - dresses, jumpsuits, full outfits",
+    "",
+    "To add a SKU: drop its isolated photo in this folder and add an entry."
+  ],
+  "garments": [
+    {
+      "id": "classic-shirt-v1",
+      "name": "پیراهن کلاسیک",
+      "nameEn": "Classic Shirt",
+      "image": "/assets/garments/classic-shirt-v1.svg",
+      "category": "upper",
+      "note": "Repository-owned placeholder asset. Replace with a real product photo before using in a store."
+    }
+  ]
+}

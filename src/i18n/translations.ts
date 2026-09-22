@@ -6,6 +6,7 @@ export const TRANSLATIONS = {
     appSub: 'AI Virtual Appearance & Smart Mirror Platform',
     coreBadge: 'OpenFit Core',
     modes: {
+      simple_tryon: 'Try On',
       fitting_room: 'Smart Fitting Room',
       storefront: 'Storefront Kiosk',
       body_engine: 'Body Transformation',
@@ -183,6 +184,7 @@ export const TRANSLATIONS = {
     appSub: 'سامانه هوشمند آینه مجازی و پرو لباس و زیبایی',
     coreBadge: 'هسته اوپن‌فیت',
     modes: {
+      simple_tryon: 'پرو لباس',
       fitting_room: 'اتاق پرو هوشمند',
       storefront: 'ویترین تعاملی هوشمند',
       body_engine: 'تغییر فرم بدنی',

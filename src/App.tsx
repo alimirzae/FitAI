@@ -8,10 +8,12 @@ import { BodyEngine } from './components/BodyEngine';
 import { SalonMode } from './components/SalonMode';
 import { AnalyticsPanel } from './components/AnalyticsPanel';
 import { SettingsModal } from './components/SettingsModal';
+import { SimpleTryOn, type SimpleGarment } from './components/SimpleTryOn';
+import { loadSimpleGarments } from './data/simpleCatalog';
 import { runtimeHealth } from './services/localAiRuntime';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  defaultMode: 'fitting_room', storeType: 'clothing_boutique', language: 'fa',
+  defaultMode: 'simple_tryon', storeType: 'clothing_boutique', language: 'fa',
   storeName: 'بوتیک پوشاک و استایل هوشمند فیت‌ای‌آی', enableFabricPhysics: true, autoRotateSeconds: 5,
 };
 
@@ -25,6 +27,9 @@ export function App() {
   const [isSettingsOpen,setIsSettingsOpen]=useState(false);
   const videoRef=useRef<HTMLVideoElement>(null);
   const [eventsLog,setEventsLog]=useState<Array<{event:string;timestamp:string;details?:any}>>([]);
+  const [simpleGarments,setSimpleGarments]=useState<SimpleGarment[]>([]);
+
+  useEffect(()=>{loadSimpleGarments().then(setSimpleGarments).catch(e=>console.error('[FitAI] GARMENT_MANIFEST_FAILED',e))},[]);
 
   const logEvent=(event:string,details?:any)=>{console.info('[FitAI]',event,details||'');setEventsLog(p=>[{event,timestamp:new Date().toLocaleTimeString(),details},...p.slice(0,99)])};
 
@@ -80,6 +85,8 @@ export function App() {
       {cameraError&&<div className="mt-1 max-w-xs text-rose-300">CAM ERROR: {cameraError}</div>}
     </div>
     <main className="flex-1 pb-12">
+      {currentMode==='simple_tryon'&&<SimpleTryOn garments={simpleGarments} videoRef={videoRef}
+        isCameraActive={isCameraActive} onToggleCamera={handleToggleCamera}/>}
       {currentMode==='fitting_room'&&<FittingRoom isCameraActive={isCameraActive} videoRef={videoRef} onLogEvent={logEvent} onToggleCamera={handleToggleCamera} lang={settings.language}/>}
       {currentMode==='storefront'&&<StorefrontMode onLogEvent={logEvent} lang={settings.language}/>}
       {currentMode==='body_engine'&&<BodyEngine onLogEvent={logEvent} lang={settings.language}/>}
