@@ -1,98 +1,70 @@
+import time
 import cv2
 import numpy as np
+import mediapipe as mp
+
+POSE_NAMES = [
+"nose","left_eye_inner","left_eye","left_eye_outer","right_eye_inner","right_eye","right_eye_outer",
+"left_ear","right_ear","mouth_left","mouth_right","left_shoulder","right_shoulder","left_elbow",
+"right_elbow","left_wrist","right_wrist","left_pinky","right_pinky","left_index","right_index",
+"left_thumb","right_thumb","left_hip","right_hip","left_knee","right_knee","left_ankle","right_ankle",
+"left_heel","right_heel","left_foot_index","right_foot_index"]
 
 class PersonAnalyzer:
-    """
-    Lightweight local analysis pipeline designed to run on 16 GB RAM / 4 GB VRAM systems.
-    CPU is the guaranteed baseline; CUDA is optional.
-    """
-
     def __init__(self):
-        self.hog = cv2.HOGDescriptor()
-        self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
-        self.face = self._create_face_detector()
-
-    def _create_face_detector(self):
-        cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-        detector = cv2.CascadeClassifier(cascade_path)
-        if detector.empty():
-            return None
-        return detector
+        self.pose = mp.solutions.pose.Pose(
+            static_image_mode=False, model_complexity=1, smooth_landmarks=True,
+            enable_segmentation=True, smooth_segmentation=True,
+            min_detection_confidence=0.5, min_tracking_confidence=0.5)
+        self.face = mp.solutions.face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
 
     @staticmethod
-    def _decode(data: bytes):
-        array = np.frombuffer(data, dtype=np.uint8)
-        image = cv2.imdecode(array, cv2.IMREAD_COLOR)
-        if image is None:
-            raise ValueError("Invalid or unsupported image.")
+    def _decode(data):
+        image=cv2.imdecode(np.frombuffer(data,np.uint8),cv2.IMREAD_COLOR)
+        if image is None: raise ValueError("Invalid or unsupported image.")
         return image
 
-    def analyze_bytes(self, data: bytes):
+    def analyze_bytes(self,data):
         return self.analyze(self._decode(data))
 
-    def analyze(self, image):
-        h, w = image.shape[:2]
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-        faces = []
-        if self.face is not None:
-            found = self.face.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(48, 48))
-            for x, y, fw, fh in found:
-                faces.append({
-                    "x": round(x / w, 4),
-                    "y": round(y / h, 4),
-                    "width": round(fw / w, 4),
-                    "height": round(fh / h, 4),
-                    "confidence": None,
-                })
-
-        resized = image
-        scale = 1.0
-        if max(h, w) > 960:
-            scale = 960.0 / max(h, w)
-            resized = cv2.resize(image, (int(w * scale), int(h * scale)))
-
-        boxes, weights = self.hog.detectMultiScale(
-            resized,
-            winStride=(8, 8),
-            padding=(8, 8),
-            scale=1.05,
-        )
-        persons = []
-        rh, rw = resized.shape[:2]
-        for idx, (x, y, bw, bh) in enumerate(boxes):
-            score = float(weights[idx]) if len(weights) > idx else 0.0
-            persons.append({
-                "x": round(x / rw, 4),
-                "y": round(y / rh, 4),
-                "width": round(bw / rw, 4),
-                "height": round(bh / rh, 4),
-                "confidence": round(score, 4),
-            })
-
-        dominant_bgr = image.reshape(-1, 3).mean(axis=0)
-        dominant_rgb = [int(dominant_bgr[2]), int(dominant_bgr[1]), int(dominant_bgr[0])]
-
-        return {
-            "detected": bool(persons or faces),
-            "image": {"width": w, "height": h},
-            "persons": persons,
-            "faces": faces,
-            "person_count": len(persons),
-            "face_count": len(faces),
-            "dominant_color_rgb": dominant_rgb,
-            "capabilities": {
-                "person_detection": True,
-                "face_detection": True,
-                "pose": False,
-                "segmentation": False,
-                "age_estimation": False,
-                "presentation_estimation": False,
-                "expression_inference": False,
-            },
-            "notes": [
-                "CPU-safe baseline pipeline.",
-                "Age, gender/presentation and emotion are intentionally not fabricated.",
-                "Pose/segmentation providers can be added behind the same API contract.",
-            ],
-        }
+    def analyze(self,image):
+        started=time.perf_counter()
+        h,w=image.shape[:2]
+        rgb=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+        pose_result=self.pose.process(rgb)
+        face_result=self.face.process(rgb)
+        landmarks=[]
+        if pose_result.pose_landmarks:
+            for i,lm in enumerate(pose_result.pose_landmarks.landmark):
+                landmarks.append({"name":POSE_NAMES[i],"x":round(float(lm.x),5),"y":round(float(lm.y),5),
+                    "z":round(float(lm.z),5),"visibility":round(float(lm.visibility),4)})
+        faces=[]
+        if face_result.detections:
+            for det in face_result.detections:
+                bb=det.location_data.relative_bounding_box
+                faces.append({"x":round(max(0.0,float(bb.xmin)),4),"y":round(max(0.0,float(bb.ymin)),4),
+                    "width":round(min(1.0,float(bb.width)),4),"height":round(min(1.0,float(bb.height)),4),
+                    "confidence":round(float(det.score[0]),4)})
+        segmentation=None
+        if pose_result.segmentation_mask is not None:
+            mask=pose_result.segmentation_mask
+            segmentation={"foreground_ratio":round(float(np.mean(mask>0.5)),4),
+                          "mean_confidence":round(float(np.mean(mask)),4)}
+        by={x["name"]:x for x in landmarks}
+        def d(a,b):
+            if a not in by or b not in by:return None
+            return round(((by[a]["x"]-by[b]["x"])**2+(by[a]["y"]-by[b]["y"])**2)**0.5,4)
+        body={"shoulder_span_norm":d("left_shoulder","right_shoulder"),
+              "hip_span_norm":d("left_hip","right_hip"),
+              "left_upper_arm_norm":d("left_shoulder","left_elbow"),
+              "right_upper_arm_norm":d("right_shoulder","right_elbow")}
+        return {"detected":bool(landmarks or faces),"image":{"width":w,"height":h},"landmarks":landmarks,
+            "faces":faces,"face_count":len(faces),"segmentation":segmentation,"body":body,
+            "confidence":round(float(np.mean([x["visibility"] for x in landmarks])) if landmarks else 0.0,4),
+            "latency_ms":round((time.perf_counter()-started)*1000,1),
+            "capabilities":{"person_detection":True,"face_detection":True,"pose":True,"segmentation":True,
+                "normalized_body_geometry":True,"metric_anthropometry":False,"face_identity":False,
+                "age_estimation":False,"presentation_estimation":False,"expression_inference":False},
+            "notes":["33-point pose and person segmentation are real MediaPipe inference.",
+                     "Body dimensions are normalized image geometry, not centimeters.",
+                     "Identity, demographics and emotion are intentionally unavailable until reviewed providers are installed."]}

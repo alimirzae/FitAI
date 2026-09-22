@@ -1,33 +1,25 @@
-# FitAI - Architecture & Technical Blueprint
+# FitAI Architecture
 
-## Overview
-FitAI is a modular, AI-first platform for virtual try-on, smart mirrors, salon styling, and interactive storefront installations.
+## Runtime topology
+Browser UI -> Local FastAPI -> Provider layer -> OpenCV / MediaPipe / optional ONNX providers.
 
-```
-Camera / Live Feed / Image
-          ↓
-  Person Understanding (BlazePose 33-pt + BiSeNet-V2 Segmentation)
-          ↓
-  Appearance & Demographic Inference (InsightFace ONNX)
-          ↓
-  Virtual Transformation Engine
-  ┌─────────────────┬───────────────────┬────────────────────┐
-  │ CatVTON Engine  │ Body Warp Mesh    │ HairFast-GAN Tint  │
-  │ (Fabric-Aware)  │ (0-10% Slim/Fit)  │ & Style Synthesis  │
-  └─────────────────┴───────────────────┴────────────────────┘
-          ↓
-  Recommendation & Campaign Engine (Contextual Re-ranking)
-          ↓
-  Section 12 Preference Confidence Engine
-  (Explicit Feedback 40% + Dwell Time 20% + Revisit 15% + Interaction 15% + Expression 10%)
-          ↓
-  Anonymous Telemetry & Real-Time Analytics
-```
+The application is standalone. ERP/iMonitor integration is an adapter, never a dependency of AI services.
 
-## Fabric Physics in Virtual Try-On
-Fabric material properties are critical for realistic virtual draping:
-1. **Bending Rigidity & Drape Factor**: Heavy wool and denim exhibit structured, angular folds. Silk, chiffon, and satin flow fluidly along body curvature.
-2. **Surface Reflectance & BRDF**: Leather and latex require specular highlights, velvet exhibits retro-reflective sheen, while cotton and linen disperse diffuse light.
-3. **Tensile Elasticity**: Athleisure and stretch-fabrics compress to muscular contours, whereas tailored coats maintain independent boxy silhouettes.
+## Current real pipeline
+Camera or image -> decode -> MediaPipe Pose (33 landmarks) -> MediaPipe person segmentation -> face detection -> normalized body geometry -> API DTO -> frontend.
 
-FitAI encodes fabric profiles (`silk`, `wool`, `leather`, `denim`, `velvet`, `linen`, `synthetic`) directly into the inference conditioning layer.
+No production path may invent confidence, pose, demographic, identity or emotion values.
+
+## Target hardware profile
+Windows workstation, 16 GB RAM, NVIDIA Quadro P1000 4 GB VRAM. The always-on vision path is CPU-first. GPU is reserved for optional models that demonstrably fit in memory. Heavy models must be loaded one at a time.
+
+## Provider boundaries
+IPoseProvider; IHumanSegmentationProvider; IFaceDetectionProvider; IFaceIdentityProvider; IBodyAnalysisProvider; IVirtualTryOnProvider; IHairProvider; IProductProvider.
+
+Unsupported providers must return unavailable/capability=false rather than fake output.
+
+## Performance strategy
+Analyze camera at a lower inference rate than display FPS; reuse/smooth landmarks between inference frames; resize inference input; avoid concurrent diffusion pipelines; expose latency and capability telemetry.
+
+## Privacy
+Raw camera frames are ephemeral by default. Identity recognition is optional and must never be required for fitting-room operation.

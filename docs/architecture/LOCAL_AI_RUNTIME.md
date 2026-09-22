@@ -1,29 +1,24 @@
-# FitAI Local AI Runtime
+# Local AI Runtime
 
-## Goal
-FitAI must remain usable on a 16 GB RAM workstation with an NVIDIA Quadro P1000 (4 GB VRAM).
+Target: Windows + 16 GB RAM + Quadro P1000 4 GB.
 
-## Runtime policy
-- CPU is the guaranteed baseline.
-- NVIDIA CUDA is optional, never mandatory for startup.
-- Heavy diffusion/VTON models are not loaded by default.
-- Camera analysis uses frame skipping to maintain interactivity.
-- APIs must report unsupported capabilities honestly rather than synthesizing fake results.
+## Real capabilities
+FastAPI, OpenCV camera/image I/O, MediaPipe 33-point pose, person segmentation, face detection, normalized body geometry, RAM/GPU telemetry.
 
-## Current real pipeline
-- Image decode: OpenCV
-- Person detection: OpenCV HOG/SVM baseline
-- Face detection: OpenCV Haar cascade baseline
-- Camera capture: OpenCV VideoCapture
-- Local REST runtime: FastAPI/Uvicorn
-- GPU/RAM telemetry: nvidia-smi + psutil
+## Explicitly not implemented yet
+Metric body measurements, face identity, age/presentation inference, emotion inference, production generative VTON and production hair synthesis.
 
-## Next providers
-The API contract intentionally exposes capability flags. Future providers should implement:
-- lightweight pose estimation
-- human segmentation
-- YuNet face detection
-- SFace embeddings
-- optional ONNX Runtime acceleration
+## API
+GET /api/v1/health
+GET /api/v1/system
+POST /api/v1/person/analyze
+GET /api/v1/camera/stream?camera=0
 
-Each provider must keep a CPU fallback and must pass license review before becoming a production dependency.
+## Performance profile
+Use 720p capture but perform inference on resized frames when necessary. Do not reserve GPU memory for always-on pose. For live UI, infer approximately 8–15 times/second and render at browser refresh rate using the latest landmarks.
+
+## Install
+Windows: run scripts/run-local.ps1 after Python 3.11 and Node.js are installed. The script creates .venv, installs backend requirements, installs npm packages if necessary, starts backend and frontend.
+
+## Capability contract
+Every response includes capabilities. UI and agents must inspect these flags rather than assuming a feature exists.

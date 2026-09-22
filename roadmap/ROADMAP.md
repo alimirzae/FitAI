@@ -1,29 +1,67 @@
-# FitAI Product & Engineering Roadmap
+# FitAI Engineering Roadmap
 
-## Phase 1: MVP Core Pipeline (Completed)
-- [x] Web & Edge client with zero external proprietary cloud dependencies
-- [x] MediaPipe 33-point Pose tracking & bounding box overlays
-- [x] Smart Fitting Room with Wardrobe Catalog & split-screen Before/After slider
-- [x] Real-time Live Camera Try-On with 30+ FPS CPU Canvas processor & torso tracking
-- [x] CPU-based Facial Recognition & Customer Profile Recall (history, likes, preferences)
-- [x] Automated Body Anthropometry & Smart Size Recommendation (XS-XXL, shoulder/chest/waist in cm)
-- [x] Store Owner Boutique Inventory & Fabric Manager (owner sets fabric, customer picks color & style)
-- [x] Smart Storefront Kiosk with automatic presence detection & 3-look rotation
-- [x] Proportional Body Transformation Engine with 0-10% sliders and compliance guards
-- [x] Beauty & Salon Engine for hairstyles, tinting, facial hair, and cosmetics
-- [x] Section 12 Preference Confidence algorithmic scoring & analytics panel
-- [x] 100% Pure Persian / فارسی (RTL) localization for all fabric physics (no English loanwords)
-- [x] Configurable Startup Mode (Clothing Store, Beauty Salon, Storefront Kiosk, Analytics)
-- [x] Fabric physics drape conditioning (فوتر و پشم، ابریشم و ساتن، چرم، دنیم و جین، مخمل، لینن، نخ‌پنبه، نانو)
+Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; TODO = not implemented.
 
-## Phase 2: Enhanced Edge & Hardware Integration
-- [x] Client-side CPU real-time frame processing for live camera streams
-- [ ] Direct WebAssembly / ONNX Runtime execution with Web Workers
-- [ ] RTSP/USB camera direct video stream ingestion with background segmentation
-- [ ] Local cache for offline operation in boutique and fitting room kiosks
-- [ ] Thermal and GPU telemetry reporting for NVIDIA Jetson and RTX edge nodes
+## Phase 0 — Repository truthfulness
+- DONE React/Vite Persian/English UI
+- DONE local FastAPI runtime
+- DONE still-image upload API
+- DONE USB webcam MJPEG capture
+- DONE system RAM/NVIDIA telemetry
+- DONE real 33-point pose inference
+- DONE real person segmentation
+- DONE real face detection
+- DONE normalized shoulder/hip/body geometry
+- DONE CPU fallback suitable for 16 GB RAM / Quadro P1000 4 GB
+- PROTOTYPE Canvas garment overlay
+- PROTOTYPE body slim/fit visualization
+- PROTOTYPE salon/hair UI
+- TODO metric anthropometry in centimeters
+- TODO face identity/returning-customer recognition
+- TODO production virtual try-on model
+- TODO production hair synthesis
+- TODO demographic/expression models
 
-## Phase 3: Commercial Store & Inventory Connectors
-- [ ] Generic REST product catalog importer
-- [ ] iMonitor retail ERP and RFID tag integration (Section 15)
-- [ ] Multi-mirror sync for collaborative salon and store consultations
+## Phase 1 — Local vision runtime
+- DONE MediaPipe pose + segmentation provider
+- DONE frame analysis client for browser camera
+- TODO wire real landmarks into every live try-on view
+- TODO temporal landmark smoothing and adaptive inference interval
+- TODO foreground mask endpoint (PNG/WebP alpha)
+- TODO camera device enumeration and configurable camera index
+- TODO benchmark command with FPS/latency/RAM report
+- TODO automated tests for image, camera and API contracts
+
+## Phase 2 — P1000 optimization
+- TODO optional ONNX Runtime provider
+- TODO CUDA provider detection with safe CPU fallback
+- TODO model registry with VRAM estimates
+- TODO one-heavy-model-at-a-time scheduler
+- TODO 512/640 inference profiles for 4 GB VRAM
+- TODO memory-pressure guard and automatic unload
+
+## Phase 3 — Virtual try-on
+- TODO evaluate commercially usable checkpoints independently from source-code licenses
+- TODO garment segmentation/preprocessing
+- TODO asynchronous try-on job API
+- TODO identity/texture/logo preservation benchmarks
+- TODO P1000-compatible low-memory path; otherwise allow remote GPU worker without changing API
+
+## Phase 4 — Product and store integration
+- TODO Generic REST product provider
+- TODO CSV provider
+- TODO iMonitor adapter
+- TODO product/variant/color/size normalization
+- TODO local offline cache
+
+## Phase 5 — Production
+- TODO SQLite/PostgreSQL persistence
+- TODO sessions/events
+- TODO admin runtime/model health
+- TODO installer packaging
+- TODO Docker CPU profile
+- TODO GPU worker profile
+- TODO CI tests and release artifacts
+
+## Definition of DONE
+A feature is DONE only when a real implementation exists, can be executed from a clean clone, and has no fabricated inference values in its production path.

@@ -1,10 +1,12 @@
-# Instructions for AI Coding Agents
+# FitAI AI-Agent Instructions
 
-All AI agents modifying the FitAI codebase must follow these directives:
-
-1. **Read Core Blueprint**: Consult `README.md`, `docs/architecture/ARCHITECTURE.md`, `roadmap/ROADMAP.md`, and `memory/PROJECT_MEMORY.md` prior to structural changes.
-2. **Update Project Memory**: Whenever you make architectural or feature updates, append the rationale and outcome to `memory/PROJECT_MEMORY.md` and `roadmap/ROADMAP.md`.
-3. **Preserve Open-Source Licensing**: Ensure every new model or library maintains a commercial-compatible license (Apache-2.0 or MIT) and is audited in `docs/licenses/MODEL_LICENSE_MATRIX.md`. Never introduce proprietary cloud AI as a hard dependency.
-4. **Bilingual Integrity**: Always maintain parity between English (LTR) and Persian / فارسی (RTL) across all components and translation keys.
-5. **Fabric & Physics Preservation**: Preserve fabric material parameters in try-on models to ensure photorealistic cloth draping.
-6. **Container & Port Constraints**: App runs on port 3000 (`0.0.0.0`) in AI Studio Cloud Run containers.
+1. Read README.md, memory/PROJECT_MEMORY.md, roadmap/ROADMAP.md, docs/IMPLEMENTATION_STATUS.md and docs/licenses/MODEL_LICENSE_MATRIX.md.
+2. Never convert a demo/mock value into a claimed AI inference.
+3. Preserve provider abstraction and CPU fallback.
+4. Optimize for 16 GB RAM / Quadro P1000 4 GB.
+5. Do not add proprietary cloud services as core dependencies.
+6. Verify code license and checkpoint license separately.
+7. Keep unsupported features explicit via capability flags.
+8. Update roadmap, memory and implementation status with every meaningful capability change.
+9. Prefer small testable commits.
+10. A clean clone must remain installable and runnable.
