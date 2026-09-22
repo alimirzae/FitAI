@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Product, GarmentColorOption, PoseLandmark, FabricType } from '../types';
-import { Camera, RefreshCw, Sparkles, Check, Sliders, Layers, AlertCircle } from 'lucide-react';
+import { Camera, RefreshCw, Sparkles, Check, Sliders, Layers, AlertCircle, Download, Maximize2, Shirt } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
 import { analyzeVideoFrame } from '../services/localAiRuntime';
 
@@ -283,6 +283,9 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     };
   }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks, runtimeLandmarks]);
 
+  const saveSnapshot=()=>{const c=canvasRef.current;if(!c)return;const a=document.createElement('a');a.download=`fitai-classic-shirt-${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();};
+  const toggleFullscreen=()=>{const el=canvasRef.current?.parentElement;if(!el)return;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();};
+
   return (
     <div className="relative aspect-video w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between">
       {/* Live Canvas Stage */}
@@ -355,6 +358,19 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
           >
             {showWireframe ? (lang === 'fa' ? 'مخفی کردن راهنمای شانه' : 'Hide Mesh') : (lang === 'fa' ? 'نمایش خطوط شانه' : 'Show Mesh')}
           </button>
+        </div>
+      )}
+
+      {isCameraActive && (
+        <div className="absolute bottom-16 left-3 right-3 flex items-center justify-between gap-2 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/85 px-3 py-2 backdrop-blur">
+            <Shirt className="w-4 h-4 text-indigo-300"/><span className="text-[11px] font-bold text-white">{lang==='fa'?'Classic Shirt v1 • لباس محلی فعال':'Classic Shirt v1 • Local garment active'}</span>
+            <input aria-label="garment opacity" type="range" min="0.55" max="1" step="0.05" value={blendOpacity} onChange={e=>setBlendOpacity(Number(e.target.value))} className="w-24"/>
+          </div>
+          <div className="pointer-events-auto flex gap-2">
+            <button onClick={saveSnapshot} className="rounded-xl border border-slate-700 bg-slate-950/85 p-2 text-slate-200" title={lang==='fa'?'ذخیره تصویر':'Save snapshot'}><Download className="w-4 h-4"/></button>
+            <button onClick={toggleFullscreen} className="rounded-xl border border-slate-700 bg-slate-950/85 p-2 text-slate-200" title={lang==='fa'?'تمام صفحه':'Fullscreen'}><Maximize2 className="w-4 h-4"/></button>
+          </div>
         </div>
       )}
 
