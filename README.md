@@ -1598,3 +1598,9 @@ The long-term platform should remain:
 The product is not merely a Virtual Try-On application.
 
 The target is an **Open-Source Intelligent Virtual Appearance Platform**.
+
+
+### Current live appearance demo
+After starting FitAI, enable the camera and open the fitting room to test **Classic Shirt v1**. It is a local transparent garment asset driven by real MediaPipe pose; use the opacity control, snapshot and fullscreen buttons on the live stage. Open Salon and select **Classic Short Hair v1 (Live)** to test the first local hairstyle overlay and color controls.
+
+Both demos preserve the webcam's native aspect ratio. They are deterministic local AR baselines, not generative VTO/hair synthesis.
