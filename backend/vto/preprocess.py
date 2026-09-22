@@ -22,6 +22,7 @@ returns.
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass
 from typing import Iterable, Optional, Sequence
 
@@ -189,15 +190,35 @@ def build_agnostic_mask(
                 # a maxi skirt or wide trouser can fall past the ankle
                 band(P(an), _extend(P(kn), P(an), 0.10), leg_r * 0.82)
 
-    # Constrain to a dilated silhouette so the model repaints the person, not
-    # the whole room behind them.
+    # The skeleton alone is not enough. A flared skirt, a wide coat or a
+    # dropped hem extends far beyond the joints, and when the legs are hidden
+    # under a skirt MediaPipe can only guess where they are - so bands drawn
+    # along those guessed joints miss the garment that is actually being worn.
+    #
+    # The real silhouette knows the true extent. Pose is used only to decide
+    # WHICH part of it belongs to this category, by splitting the frame along
+    # the hip line (or the shoulder line) which stays correct even if the
+    # person leans.
     if person_mask is not None:
         silhouette = person_mask.convert("L").resize((w, h), Image.BILINEAR)
-        grow = max(3, int(shoulder_span * 0.22))
-        silhouette = silhouette.filter(ImageFilter.MaxFilter(_odd(min(grow, 45))))
-        arr = np.minimum(np.asarray(mask, dtype=np.uint16),
-                         np.asarray(silhouette, dtype=np.uint16) * 255 // 255)
-        mask = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
+        grow = max(3, int(shoulder_span * 0.16))
+        silhouette = silhouette.filter(ImageFilter.MaxFilter(_odd(min(grow, 31))))
+        body = np.asarray(silhouette) > 127
+
+        # Each band needs BOTH edges. Bounding a top only from below lets the
+        # silhouette carry the mask straight up over the head, which erases
+        # the customer's face and hair - the one thing that must survive.
+        neck = _below_line(size, shoulder_l, shoulder_r, -torso_len * 0.13, above=False)
+        if category == "upper":
+            region = neck & _below_line(size, hip_l, hip_r, torso_len * 0.34, above=True)
+        elif category == "lower":
+            region = _below_line(size, hip_l, hip_r, -torso_len * 0.30, above=False)
+        else:
+            region = neck
+
+        combined = np.asarray(mask) > 127
+        combined |= body & region
+        mask = Image.fromarray((combined * 255).astype(np.uint8))
 
     # Protect what must never be regenerated: head and hands.
     keep = Image.new("L", (w, h), 0)
@@ -228,6 +249,32 @@ def build_agnostic_mask(
 
 def _odd(value: int) -> int:
     return value if value % 2 == 1 else value + 1
+
+
+def _below_line(size: tuple[int, int], a: tuple[float, float], b: tuple[float, float],
+                offset: float, above: bool) -> np.ndarray:
+    """Boolean half-plane split by the line through ``a`` and ``b``.
+
+    ``offset`` shifts the line along its own normal, in pixels, so a category
+    can claim a little past the joint line - a shirt hangs below the hips, a
+    waistband sits above them. Using the real hip/shoulder line rather than a
+    horizontal cut keeps this correct when the customer leans or stands with
+    weight on one leg.
+    """
+    w, h = size
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    length = math.hypot(dx, dy)
+    if length < 1e-6:
+        return np.ones((h, w), dtype=bool)
+
+    # Unit normal pointing down the image (towards increasing y).
+    nx, ny = -dy / length, dx / length
+    if ny < 0:
+        nx, ny = -nx, -ny
+
+    ys, xs = np.mgrid[0:h, 0:w]
+    signed = (xs - a[0]) * nx + (ys - a[1]) * ny - offset
+    return signed <= 0 if above else signed >= 0
 
 
 # --------------------------------------------------------------------------- #
@@ -301,7 +348,18 @@ def composite_result(original: Image.Image, generated: Image.Image,
 # MediaPipe-backed pose extraction (optional import)
 # --------------------------------------------------------------------------- #
 
-def detect_pose(image: Image.Image) -> tuple[list[Landmark], Optional[Image.Image]]:
+# MediaPipe's heavy pose model (complexity 2) aborts with an access violation
+# on some builds - reproduced on mediapipe 0.10.20 / Windows, where complexity
+# 0 and 1 both run cleanly. A native crash cannot be caught in-process, so the
+# default stays on the full model (1), which is accurate enough for garment
+# masking. Opt into the heavy model only after testing it on the target
+# machine.
+POSE_MODEL_COMPLEXITY = int(os.getenv("FITAI_POSE_COMPLEXITY", "1"))
+
+
+def detect_pose(image: Image.Image,
+                model_complexity: Optional[int] = None
+                ) -> tuple[list[Landmark], Optional[Image.Image]]:
     """Return pose landmarks and the segmentation mask for a person photo.
 
     Imported lazily so that the pure-geometry functions above stay usable (and
@@ -314,8 +372,10 @@ def detect_pose(image: Image.Image) -> tuple[list[Landmark], Optional[Image.Imag
             "mediapipe is required for pose extraction; install backend/requirements.txt"
         ) from exc
 
+    complexity = POSE_MODEL_COMPLEXITY if model_complexity is None else model_complexity
     rgb = np.asarray(image.convert("RGB"))
-    with mp.solutions.pose.Pose(static_image_mode=True, model_complexity=2,
+    with mp.solutions.pose.Pose(static_image_mode=True,
+                                model_complexity=complexity,
                                 enable_segmentation=True,
                                 min_detection_confidence=0.5) as pose:
         result = pose.process(rgb)

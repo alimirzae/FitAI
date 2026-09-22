@@ -14,6 +14,7 @@ from PIL import Image
 from backend.tests.fixtures import FRAME, partial_pose, standing_pose
 from backend.vto.preprocess import (
     ANKLE_L,
+    EAR_L,
     ELBOW_L,
     HIP_L,
     HIP_R,
@@ -117,17 +118,59 @@ def test_mask_stays_a_minority_of_the_frame(category, ceiling):
     assert 0.02 < coverage(mask) < ceiling
 
 
-def test_segmentation_mask_clips_the_region():
-    """With a silhouette supplied, the mask must not spill across the room."""
-    pose = standing_pose()
-    silhouette = Image.new("L", FRAME, 0)
+def flared_silhouette() -> Image.Image:
+    """A person wearing something much wider than their skeleton: narrow
+    through the torso, flaring well past the legs below the hip - a skirt."""
     from PIL import ImageDraw
-    ImageDraw.Draw(silhouette).rectangle(
-        [int(0.33 * W), int(0.10 * H), int(0.67 * W), int(0.99 * H)], fill=255)
+    silhouette = Image.new("L", FRAME, 0)
+    draw = ImageDraw.Draw(silhouette)
+    draw.polygon([
+        (int(0.40 * W), int(0.10 * H)), (int(0.60 * W), int(0.10 * H)),
+        (int(0.62 * W), int(0.50 * H)),
+        (int(0.90 * W), int(0.88 * H)), (int(0.10 * W), int(0.88 * H)),
+        (int(0.38 * W), int(0.50 * H)),
+    ], fill=255)
+    return silhouette
 
-    wide = build_agnostic_mask(FRAME, pose, "upper")
-    clipped = build_agnostic_mask(FRAME, pose, "upper", person_mask=silhouette)
-    assert coverage(clipped) < coverage(wide)
+
+def test_silhouette_covers_a_garment_wider_than_the_skeleton():
+    """The skeleton cannot know a skirt flares. The real silhouette can, and
+    the mask has to reach the hem or the old garment survives the repaint."""
+    pose = standing_pose()
+    skeleton_only = build_agnostic_mask(FRAME, pose, "lower")
+    with_body = build_agnostic_mask(FRAME, pose, "lower", person_mask=flared_silhouette())
+
+    assert coverage(with_body) > coverage(skeleton_only)
+
+    row = int(0.80 * H)                       # well down the flare
+    skeleton_row = np.nonzero(np.asarray(skeleton_only)[row] > 127)[0]
+    body_row = np.nonzero(np.asarray(with_body)[row] > 127)[0]
+    assert body_row.size > 0
+    span = lambda r: (r[-1] - r[0]) if r.size else 0
+    assert span(body_row) > span(skeleton_row) * 1.5
+
+
+def test_silhouette_never_carries_the_mask_over_the_face():
+    """The silhouette includes the head. Bounding the band only from below
+    would erase the customer's face and hair, which must never happen."""
+    pose = standing_pose()
+    silhouette = flared_silhouette()
+    for category in ("upper", "lower", "overall"):
+        mask = build_agnostic_mask(FRAME, pose, category, person_mask=silhouette)
+        assert not covered(mask, pose[NOSE]), f"{category} mask reached the face"
+        assert not covered(mask, pose[EAR_L]), f"{category} mask reached the hair"
+
+
+def test_silhouette_mask_stays_bounded():
+    silhouette = flared_silhouette()
+    for category in ("upper", "lower", "overall"):
+        mask = build_agnostic_mask(FRAME, pose_for(category), category,
+                                   person_mask=silhouette)
+        assert coverage(mask) < 0.55
+
+
+def pose_for(_category: str):
+    return standing_pose()
 
 
 # --------------------------------------------------------------------------- #
