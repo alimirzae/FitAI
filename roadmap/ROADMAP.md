@@ -16,12 +16,13 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - DONE pose-aware articulated AR garment baseline (real shoulder/hip/elbow/wrist tracking)
 - DONE first isolated transparent garment asset: Classic Shirt v1
 - TODO generalized garment asset contract + alpha masks for catalog import
-- PROTOTYPE pose-anchored torso fit + articulated sleeves for Classic Shirt v1
+- DONE live garment compositor uses transparent garment asset + real pose fit + real MediaPipe person mask for occlusion
+- TODO generalized TPS/piecewise garment deformation with catalog preprocessing
 - TODO generalized piecewise affine/TPS garment warp
 - PROTOTYPE body slim/fit visualization
 - DONE live Salon camera + face detection + Face Mesh geometry
-- DONE first local hairstyle asset: Classic Short Hair v1 fitted from real face detection/Face Mesh geometry
-- PROTOTYPE hairstyle color tint and live alignment
+- DONE removed cartoon hairstyle overlay from production UI
+- TODO install reviewed semantic hair segmentation + hairstyle synthesis provider before rendering transformed hair
 - TODO semantic pixel-level hair segmentation for precise occlusion/boundaries
 - TODO production hairstyle synthesis
 - TODO metric anthropometry in centimeters
