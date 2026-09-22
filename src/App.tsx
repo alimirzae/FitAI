@@ -83,7 +83,7 @@ export function App() {
       {currentMode==='fitting_room'&&<FittingRoom isCameraActive={isCameraActive} videoRef={videoRef} onLogEvent={logEvent} onToggleCamera={handleToggleCamera} lang={settings.language}/>}
       {currentMode==='storefront'&&<StorefrontMode onLogEvent={logEvent} lang={settings.language}/>}
       {currentMode==='body_engine'&&<BodyEngine onLogEvent={logEvent} lang={settings.language}/>}
-      {currentMode==='salon'&&<SalonMode onLogEvent={logEvent} lang={settings.language}/>}
+      {currentMode==='salon'&&<SalonMode onLogEvent={logEvent} lang={settings.language} videoRef={videoRef} isCameraActive={isCameraActive} onToggleCamera={handleToggleCamera}/>}
       {currentMode==='analytics'&&<AnalyticsPanel eventsLog={eventsLog} lang={settings.language}/>}
     </main>
     <video ref={videoRef} autoPlay playsInline muted

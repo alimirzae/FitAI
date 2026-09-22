@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ModelSubject, SalonConfiguration } from '../types';
 import { MODEL_SUBJECTS } from '../data/catalog';
 import { Language, TRANSLATIONS } from '../i18n/translations';
+import { analyzeVideoFrame, LocalPersonAnalysis } from '../services/localAiRuntime';
 import { 
+  Camera,
   Scissors, 
   Sparkles, 
   Palette, 
@@ -15,9 +17,12 @@ import {
 interface SalonModeProps {
   onLogEvent: (event: string, details?: any) => void;
   lang: Language;
+  videoRef: React.RefObject<HTMLVideoElement>;
+  isCameraActive: boolean;
+  onToggleCamera: () => void;
 }
 
-export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
+export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef, isCameraActive, onToggleCamera }) => {
   const t = TRANSLATIONS[lang];
   const [selectedModel, setSelectedModel] = useState<ModelSubject>(MODEL_SUBJECTS[0]); // Sophia
   
@@ -33,6 +38,40 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
 
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'hair' | 'color' | 'facial_hair' | 'makeup'>('hair');
+  const liveVideoRef = useRef<HTMLVideoElement>(null);
+  const overlayRef = useRef<HTMLCanvasElement>(null);
+  const [liveAnalysis,setLiveAnalysis]=useState<LocalPersonAnalysis|null>(null);
+  const [liveError,setLiveError]=useState<string|null>(null);
+
+  useEffect(()=>{
+    if(!isCameraActive || !videoRef.current || !liveVideoRef.current) return;
+    const stream=videoRef.current.srcObject as MediaStream|null;
+    if(!stream)return;
+    liveVideoRef.current.srcObject=stream; liveVideoRef.current.play().catch(()=>{});
+  },[isCameraActive,videoRef]);
+
+  useEffect(()=>{
+    if(!isCameraActive)return;
+    let stopped=false,busy=false;
+    const id=window.setInterval(async()=>{
+      const v=liveVideoRef.current; if(!v||v.readyState<2||busy)return; busy=true;
+      try{const a=await analyzeVideoFrame(v);if(!stopped){setLiveAnalysis(a);setLiveError(null);}}
+      catch(e:any){if(!stopped)setLiveError(e?.message||String(e));}
+      finally{busy=false}
+    },300);
+    return()=>{stopped=true;window.clearInterval(id)};
+  },[isCameraActive]);
+
+  useEffect(()=>{
+    const c=overlayRef.current,v=liveVideoRef.current,a=liveAnalysis;if(!c||!v||!a)return;
+    const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
+    // Face box from real MediaPipe detection.
+    for(const f of a.faces||[]){const x=(1-f.x-f.width)*c.width,y=f.y*c.height,w=f.width*c.width,h=f.height*c.height;
+      ctx.strokeStyle='#f472b6';ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);
+      // Non-generative salon preview: tint an approximate hair region above the detected face.
+      ctx.save();ctx.globalAlpha=.32;ctx.fillStyle=config.hairColorHex;ctx.beginPath();ctx.ellipse(x+w/2,y+h*.12,w*.58,h*.55,0,Math.PI,Math.PI*2);ctx.fill();ctx.restore();
+    }
+  },[liveAnalysis,config.hairColorHex]);
 
   const hairstyles = [
     { id: 'style-layered-waves', nameEn: 'Layered Beach Waves', nameFa: 'موج‌دار لایه‌ای ساحلی', length: 'medium', category: 'all' },
@@ -110,6 +149,16 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
         </div>
       </div>
 
+      <div className="flex items-center gap-3">
+        <button onClick={onToggleCamera} className="px-4 py-2 rounded-xl bg-pink-600 text-white text-xs font-bold flex items-center gap-2">
+          <Camera className="w-4 h-4"/>{isCameraActive ? (lang==='fa'?'خاموش کردن دوربین':'Stop Camera') : (lang==='fa'?'فعال‌سازی دوربین سالن':'Enable Salon Camera')}
+        </button>
+        <span className={liveAnalysis?.faces?.length ? 'text-emerald-400 text-xs' : 'text-slate-400 text-xs'}>
+          {isCameraActive ? `Face: ${liveAnalysis?.faces?.length||0} | AI: ${liveAnalysis?.latency_ms??'--'}ms` : (lang==='fa'?'حالت تصویر نمونه':'Sample image mode')}
+        </span>
+        {liveError&&<span className="text-rose-400 text-xs">{liveError}</span>}
+      </div>
+
       {/* Main Grid: Left Stage (Before vs After Side-by-Side) & Right Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
@@ -129,11 +178,8 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
                 </span>
               </div>
               <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
-                <img
-                  src={selectedModel.imageUrl}
-                  alt="Original Portrait"
-                  className="w-full h-full object-cover"
-                />
+                {isCameraActive ? <><video ref={liveVideoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover -scale-x-100"/><canvas ref={overlayRef} width={720} height={960} className="absolute inset-0 w-full h-full object-cover"/></> :
+                <img src={selectedModel.imageUrl} alt="Original Portrait" className="w-full h-full object-cover" />}
               </div>
             </div>
 
@@ -151,14 +197,8 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
                 </span>
               </div>
               <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group">
-                <img
-                  src={selectedModel.imageUrl}
-                  alt="Virtual Salon Look"
-                  className="w-full h-full object-cover"
-                  style={{
-                    filter: `hue-rotate(15deg) saturate(1.1)`
-                  }}
-                />
+                {isCameraActive ? <video autoPlay playsInline muted ref={(el)=>{if(el&&videoRef.current?.srcObject&&el.srcObject!==videoRef.current.srcObject){el.srcObject=videoRef.current.srcObject;el.play().catch(()=>{});}}} className="absolute inset-0 w-full h-full object-cover -scale-x-100"/> :
+                <img src={selectedModel.imageUrl} alt="Virtual Salon Look" className="w-full h-full object-cover" style={{filter:'hue-rotate(15deg) saturate(1.1)'}} />}
 
                 {/* Hair Tint Color Filter Overlay */}
                 <div 

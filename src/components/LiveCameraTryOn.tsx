@@ -141,10 +141,34 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
           const shoulderSpan = Math.abs((1 - leftShoulder.x) - (1 - rightShoulder.x)) * width * 1.55;
           const torsoLength = Math.max(120, (hipMidY - shoulderMidY) * 1.6);
 
-          // 3. Render Garment Overlay dynamically anchored to moving body
+          // 3. Visible real CV overlay: draw MediaPipe skeleton so detection is observable.
+          if (runtimeLandmarks.length) {
+            const byName = new Map(runtimeLandmarks.map(p => [p.name, p]));
+            const edges = [['left_shoulder','right_shoulder'],['left_shoulder','left_elbow'],['left_elbow','left_wrist'],['right_shoulder','right_elbow'],['right_elbow','right_wrist'],['left_shoulder','left_hip'],['right_shoulder','right_hip'],['left_hip','right_hip'],['left_hip','left_knee'],['right_hip','right_knee']];
+            ctx.save(); ctx.strokeStyle='#22d3ee'; ctx.fillStyle='#67e8f9'; ctx.lineWidth=3;
+            for (const [a,b] of edges) { const p=byName.get(a), q=byName.get(b); if(!p||!q)continue; ctx.beginPath();ctx.moveTo((1-p.x)*width,p.y*height);ctx.lineTo((1-q.x)*width,q.y*height);ctx.stroke(); }
+            for (const p of runtimeLandmarks) { if ((p.visibility ?? 1) < .45) continue; ctx.beginPath();ctx.arc((1-p.x)*width,p.y*height,4,0,Math.PI*2);ctx.fill(); }
+            ctx.restore();
+          }
+
+          // 4. Guaranteed AR garment baseline. Catalog photos are NOT transparent garment assets,
+          // so use a tracked vector garment until a real garment-mask/VTON provider is installed.
+          if (runtimeLandmarks.length) {
+            const gWidth=Math.max(180,shoulderSpan*1.12), gHeight=Math.max(210,torsoLength);
+            const gX=shoulderMidX-gWidth/2, gY=shoulderMidY-gHeight*.08;
+            ctx.save(); ctx.globalAlpha=.72; ctx.fillStyle=selectedColor?.hex || selectedProduct.colorHex || '#334155';
+            ctx.beginPath();
+            ctx.moveTo(gX+gWidth*.18,gY); ctx.lineTo(gX+gWidth*.82,gY);
+            ctx.lineTo(gX+gWidth,gY+gHeight*.25); ctx.lineTo(gX+gWidth*.84,gY+gHeight*.38);
+            ctx.lineTo(gX+gWidth*.76,gY+gHeight); ctx.lineTo(gX+gWidth*.24,gY+gHeight);
+            ctx.lineTo(gX+gWidth*.16,gY+gHeight*.38); ctx.lineTo(gX,gY+gHeight*.25); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle='rgba(255,255,255,.65)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+          }
+
+          // 5. Experimental texture overlay. This only works well with transparent garment assets.
           if (garmentImgRef.current && garmentImgRef.current.complete) {
             ctx.save();
-            ctx.globalAlpha = blendOpacity;
+            ctx.globalAlpha = Math.min(blendOpacity, 0.18);
 
             // Target bounding box for garment
             const gWidth = Math.max(180, shoulderSpan);

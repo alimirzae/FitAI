@@ -26,3 +26,10 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - Live try-on shows real inference latency/errors.
 - Windows launcher starts Uvicorn with debug + access logs.
 - SalonMode remains a prototype using catalog images; it is not yet wired to the live camera. Do not interpret camera activation while on SalonMode as a salon camera pipeline.
+
+## Visible CV baseline — 2026-09-22
+- Live fitting room now renders real MediaPipe pose landmarks/skeleton over the camera.
+- A vector AR garment follows real shoulders/hips so tracking can be tested without pretending catalog photos are VTO-ready assets.
+- Existing Unsplash catalog photos are reference/product photos, not transparent garment masks; their texture overlay is intentionally low-opacity.
+- Salon now supports the shared live camera and real face detection. Current hair color overlay is a geometric preview only, not HairFast-GAN/generative hair synthesis.
+- Production garment VTO requires garment preprocessing/masks or a reviewed VTON provider. Production hairstyle transfer requires a reviewed hair synthesis provider.
