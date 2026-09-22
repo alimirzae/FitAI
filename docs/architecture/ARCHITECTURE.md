@@ -65,3 +65,9 @@ The first runnable appearance assets are stored locally under `public/assets/gar
 Camera pixels are never stretched to a fixed portrait canvas. Canvas backing dimensions are synchronized to the real camera `videoWidth/videoHeight`; CSS uses natural aspect presentation. Future garment and hair providers must preserve this coordinate contract.
 
 UI capabilities implemented around this renderer include product/color selection, fit opacity, live AI telemetry, before/after Salon view, hairstyle/color selection, snapshot and fullscreen. These deterministic AR renderers are a fast local layer beneath future TPS and optional generative providers.
+
+
+## Realistic compositing contract — 2026-09-22
+Person analysis now exposes a binary segmentation PNG mask in addition to pose/face geometry. The browser compositor uses this mask for foreground occlusion and uses a transparent garment source with pose-derived placement. This replaces the flat polygon prototype in the main fitting-room path.
+
+Photorealistic output is a separate provider tier. The UI must never substitute a cartoon/vector hairstyle for an unavailable hairstyle synthesis model. When no reviewed hair provider is installed, Salon shows the live source and provider-unavailable state while retaining real face/Face Mesh analysis.
