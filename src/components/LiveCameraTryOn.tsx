@@ -151,22 +151,29 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             ctx.restore();
           }
 
-          // 4. Guaranteed AR garment baseline. Catalog photos are NOT transparent garment assets,
-          // so use a tracked vector garment until a real garment-mask/VTON provider is installed.
+          // 4. Pose-aware articulated garment baseline: torso + independent sleeves.
+          // Deterministic real-time AR; not generative VTO.
           if (runtimeLandmarks.length) {
-            const gWidth=Math.max(180,shoulderSpan*1.12), gHeight=Math.max(210,torsoLength);
-            const gX=shoulderMidX-gWidth/2, gY=shoulderMidY-gHeight*.08;
-            ctx.save(); ctx.globalAlpha=.72; ctx.fillStyle=selectedColor?.hex || selectedProduct.colorHex || '#334155';
-            ctx.beginPath();
-            ctx.moveTo(gX+gWidth*.18,gY); ctx.lineTo(gX+gWidth*.82,gY);
-            ctx.lineTo(gX+gWidth,gY+gHeight*.25); ctx.lineTo(gX+gWidth*.84,gY+gHeight*.38);
-            ctx.lineTo(gX+gWidth*.76,gY+gHeight); ctx.lineTo(gX+gWidth*.24,gY+gHeight);
-            ctx.lineTo(gX+gWidth*.16,gY+gHeight*.38); ctx.lineTo(gX,gY+gHeight*.25); ctx.closePath(); ctx.fill();
-            ctx.strokeStyle='rgba(255,255,255,.65)';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+            const byName=new Map(runtimeLandmarks.map(p=>[p.name,p]));
+            const pt=(name:string)=>{const p=byName.get(name);return p?{x:(1-p.x)*width,y:p.y*height}:null};
+            const ls=pt('left_shoulder'),rs=pt('right_shoulder'),lh=pt('left_hip'),rh=pt('right_hip');
+            const le=pt('left_elbow'),re=pt('right_elbow'),lw=pt('left_wrist'),rw=pt('right_wrist');
+            if(ls&&rs&&lh&&rh){
+              const color=selectedColor?.hex||selectedProduct.colorHex||'#334155';
+              ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=color;ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=2;
+              const sx=(ls.x+rs.x)/2,sy=(ls.y+rs.y)/2,neck=Math.abs(ls.x-rs.x)*.14;
+              ctx.beginPath();ctx.moveTo(ls.x,ls.y);ctx.lineTo(sx-neck,sy);ctx.quadraticCurveTo(sx,sy+18,sx+neck,sy);
+              ctx.lineTo(rs.x,rs.y);ctx.lineTo(rh.x,rh.y);ctx.lineTo(lh.x,lh.y);ctx.closePath();ctx.fill();ctx.stroke();
+              const sleeve=(p0:any,p1:any,p2:any)=>{if(!p0||!p1)return;const dx=p1.x-p0.x,dy=p1.y-p0.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
+                const w0=Math.max(16,shoulderSpan*.11),w1=Math.max(12,w0*.68);ctx.beginPath();ctx.moveTo(p0.x+nx*w0,p0.y+ny*w0);ctx.lineTo(p1.x+nx*w1,p1.y+ny*w1);
+                if(p2){const dx2=p2.x-p1.x,dy2=p2.y-p1.y,l2=Math.hypot(dx2,dy2)||1,nx2=-dy2/l2,ny2=dx2/l2,w2=Math.max(9,w1*.65);ctx.lineTo(p2.x+nx2*w2,p2.y+ny2*w2);ctx.lineTo(p2.x-nx2*w2,p2.y-ny2*w2);}
+                ctx.lineTo(p1.x-nx*w1,p1.y-ny*w1);ctx.lineTo(p0.x-nx*w0,p0.y-ny*w0);ctx.closePath();ctx.fill();ctx.stroke();};
+              sleeve(ls,le,lw);sleeve(rs,re,rw);ctx.restore();
+            }
           }
 
           // 5. Experimental texture overlay. This only works well with transparent garment assets.
-          if (garmentImgRef.current && garmentImgRef.current.complete) {
+          if (false && garmentImgRef.current && garmentImgRef.current.complete) {
             ctx.save();
             ctx.globalAlpha = Math.min(blendOpacity, 0.18);
 
