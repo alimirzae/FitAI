@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 700">
+<defs><linearGradient id="f" x1="0" x2="1"><stop stop-color="#dbeafe"/><stop offset=".48" stop-color="#eff6ff"/><stop offset="1" stop-color="#bfdbfe"/></linearGradient><filter id="s"><feGaussianBlur stdDeviation="3"/></filter></defs>
+<path d="M92 90 L205 38 Q300 82 395 38 L508 90 L465 690 L135 690 Z" fill="url(#f)" stroke="#94a3b8" stroke-width="6"/>
+<path d="M205 38 L300 105 L395 38 L350 22 L300 58 L250 22 Z" fill="#f8fafc" stroke="#94a3b8" stroke-width="5"/>
+<path d="M300 105 L300 688" stroke="#94a3b8" stroke-width="5"/><path d="M307 105 L307 688" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
+<g fill="#64748b"><circle cx="300" cy="160" r="6"/><circle cx="300" cy="240" r="6"/><circle cx="300" cy="320" r="6"/><circle cx="300" cy="400" r="6"/><circle cx="300" cy="480" r="6"/><circle cx="300" cy="560" r="6"/></g>
+<path d="M145 210 Q205 185 250 210 L245 325 Q195 345 150 320 Z" fill="none" stroke="#94a3b8" stroke-width="4"/>
+<path d="M455 210 Q395 185 350 210 L355 325 Q405 345 450 320 Z" fill="none" stroke="#94a3b8" stroke-width="4"/>
+<path d="M155 100 Q185 350 165 650" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="18" filter="url(#s)"/>
+<path d="M445 100 Q415 350 435 650" fill="none" stroke="#64748b" stroke-opacity=".12" stroke-width="22" filter="url(#s)"/>
+</svg>
