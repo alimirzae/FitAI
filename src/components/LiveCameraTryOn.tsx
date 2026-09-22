@@ -80,7 +80,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
         const result = await analyzeVideoFrame(video);
         if (!cancelled) {
           setRuntimeLandmarks(result.landmarks || []);
-          if(result.segmentation?.mask_png_base64){const mask=new Image();mask.src=`data:image/png;base64,${result.segmentation.mask_png_base64}`;mask.onload=()=>{personMaskRef.current=mask;};}
+          
           setAiOnline(true);
           setAiError(null);
           setAiLatency(result.latency_ms);
@@ -154,10 +154,14 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
           }
 
           // 4. Garment compositor: transparent garment asset, pose fit, cloth shading and person-mask occlusion.
-          if (runtimeLandmarks.length && garmentImgRef.current?.complete) {
-            const byName=new Map(runtimeLandmarks.map(p=>[p.name,p]));
+          if (garmentImgRef.current?.complete) {
+            const tracked = runtimeLandmarks.length ? runtimeLandmarks : activeLandmarks;
+            const byName=new Map(tracked.map(p=>[p.name,p]));
             const pt=(name:string)=>{const p=byName.get(name);return p?{x:(1-p.x)*width,y:p.y*height}:null};
-            const ls=pt('left_shoulder'),rs=pt('right_shoulder'),lh=pt('left_hip'),rh=pt('right_hip');
+            const ls=pt('left_shoulder')||{x:shoulderMidX-shoulderSpan*.5,y:shoulderMidY};
+            const rs=pt('right_shoulder')||{x:shoulderMidX+shoulderSpan*.5,y:shoulderMidY};
+            const lh=pt('left_hip')||{x:shoulderMidX-shoulderSpan*.38,y:hipMidY};
+            const rh=pt('right_hip')||{x:shoulderMidX+shoulderSpan*.38,y:hipMidY};
             if(ls&&rs&&lh&&rh){
               const shoulderW=Math.abs(rs.x-ls.x), torsoH=Math.abs(((lh.y+rh.y)/2)-((ls.y+rs.y)/2));
               const cx=(ls.x+rs.x+lh.x+rh.x)/4;
@@ -174,7 +178,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
 
               // Occlusion: restore foreground person pixels over garment around head/arms.
               // The backend mask is real MediaPipe segmentation; clipping is conservative so torso garment remains visible.
-              if(personMaskRef.current?.complete){
+              if(aiOnline && personMaskRef.current?.complete){
                 ctx.save();ctx.globalAlpha=.98;ctx.globalCompositeOperation='source-over';
                 const headBottom=Math.min(ls.y,rs.y)+torsoH*.02;
                 ctx.beginPath();ctx.rect(0,0,width,headBottom);ctx.clip();ctx.drawImage(personMaskRef.current,0,0,width,height);ctx.restore();
@@ -282,7 +286,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks, runtimeLandmarks]);
+  }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks, runtimeLandmarks, aiOnline]);
 
   const saveSnapshot=()=>{const c=canvasRef.current;if(!c)return;const a=document.createElement('a');a.download=`fitai-classic-shirt-${Date.now()}.png`;a.href=c.toDataURL('image/png');a.click();};
   const toggleFullscreen=()=>{const el=canvasRef.current?.parentElement;if(!el)return;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();};
