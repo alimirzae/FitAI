@@ -17,6 +17,7 @@ class PersonAnalyzer:
             enable_segmentation=True, smooth_segmentation=True,
             min_detection_confidence=0.5, min_tracking_confidence=0.5)
         self.face = mp.solutions.face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
+        self.face_mesh = mp.solutions.face_mesh.FaceMesh(static_image_mode=False, max_num_faces=2, refine_landmarks=True, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
     @staticmethod
     def _decode(data):
@@ -33,6 +34,7 @@ class PersonAnalyzer:
         rgb=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
         pose_result=self.pose.process(rgb)
         face_result=self.face.process(rgb)
+        mesh_result=self.face_mesh.process(rgb)
         landmarks=[]
         if pose_result.pose_landmarks:
             for i,lm in enumerate(pose_result.pose_landmarks.landmark):
@@ -45,6 +47,11 @@ class PersonAnalyzer:
                 faces.append({"x":round(max(0.0,float(bb.xmin)),4),"y":round(max(0.0,float(bb.ymin)),4),
                     "width":round(min(1.0,float(bb.width)),4),"height":round(min(1.0,float(bb.height)),4),
                     "confidence":round(float(det.score[0]),4)})
+        face_mesh=[]
+        if mesh_result.multi_face_landmarks:
+            mesh_indices=[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109]
+            for face_lms in mesh_result.multi_face_landmarks:
+                face_mesh.append([{"index":i,"x":round(float(face_lms.landmark[i].x),5),"y":round(float(face_lms.landmark[i].y),5),"z":round(float(face_lms.landmark[i].z),5)} for i in mesh_indices])
         segmentation=None
         if pose_result.segmentation_mask is not None:
             mask=pose_result.segmentation_mask
@@ -59,10 +66,10 @@ class PersonAnalyzer:
               "left_upper_arm_norm":d("left_shoulder","left_elbow"),
               "right_upper_arm_norm":d("right_shoulder","right_elbow")}
         return {"detected":bool(landmarks or faces),"image":{"width":w,"height":h},"landmarks":landmarks,
-            "faces":faces,"face_count":len(faces),"segmentation":segmentation,"body":body,
+            "faces":faces,"face_count":len(faces),"face_mesh":face_mesh,"segmentation":segmentation,"body":body,
             "confidence":round(float(np.mean([x["visibility"] for x in landmarks])) if landmarks else 0.0,4),
             "latency_ms":round((time.perf_counter()-started)*1000,1),
-            "capabilities":{"person_detection":True,"face_detection":True,"pose":True,"segmentation":True,
+            "capabilities":{"person_detection":True,"face_detection":True,"face_mesh":True,"hair_semantic_segmentation":False,"pose":True,"segmentation":True,
                 "normalized_body_geometry":True,"metric_anthropometry":False,"face_identity":False,
                 "age_estimation":False,"presentation_estimation":False,"expression_inference":False},
             "notes":["33-point pose and person segmentation are real MediaPipe inference.",
