@@ -48,3 +48,12 @@ Person Understanding / VTON / Body / Salon
 Kinect v2 integration is planned for Windows through Microsoft Kinect for Windows SDK 2.0. SDK-specific objects must be converted at the provider boundary. Core services consume only FitAI DTOs. Future RGB-D devices must reuse the same contracts.
 
 RGB-D is an enhancement, not a prerequisite: clean installation and normal operation must remain possible with a standard webcam only.
+
+
+## Appearance rendering layers — 2026-09-22
+1. CPU MediaPipe pose / face / Face Mesh.
+2. Deterministic pose-aware AR for immediate live feedback.
+3. Planned isolated transparent garment/hair assets with geometric warping.
+4. Optional heavy generative VTO/hair workers only after license and target-hardware review.
+
+The UI must distinguish these layers. Deterministic AR is not generative VTO. Face-Mesh-guided scalp geometry is not semantic hair segmentation.
