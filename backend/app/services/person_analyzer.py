@@ -2,6 +2,7 @@ import time
 import cv2
 import numpy as np
 import mediapipe as mp
+import threading
 
 POSE_NAMES = [
 "nose","left_eye_inner","left_eye","left_eye_outer","right_eye_inner","right_eye","right_eye_outer",
@@ -12,6 +13,7 @@ POSE_NAMES = [
 
 class PersonAnalyzer:
     def __init__(self):
+        self._lock = threading.RLock()
         self.pose = mp.solutions.pose.Pose(
             static_image_mode=False, model_complexity=1, smooth_landmarks=True,
             enable_segmentation=True, smooth_segmentation=True,
@@ -32,9 +34,12 @@ class PersonAnalyzer:
         started=time.perf_counter()
         h,w=image.shape[:2]
         rgb=cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
-        pose_result=self.pose.process(rgb)
-        face_result=self.face.process(rgb)
-        mesh_result=self.face_mesh.process(rgb)
+        # MediaPipe Solution instances are stateful. Serialize access so live UI,
+        # Salon and optional camera-stream requests cannot corrupt one shared graph.
+        with self._lock:
+            pose_result=self.pose.process(rgb)
+            face_result=self.face.process(rgb)
+            mesh_result=self.face_mesh.process(rgb)
         landmarks=[]
         if pose_result.pose_landmarks:
             for i,lm in enumerate(pose_result.pose_landmarks.landmark):
