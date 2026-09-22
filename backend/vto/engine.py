@@ -212,6 +212,27 @@ class DiffusersInpaintEngine(VtoEngine):
 # external research checkout
 # --------------------------------------------------------------------------- #
 
+def _split_command(command: str) -> list[str]:
+    """Split a command template into argv, correctly on Windows too.
+
+    ``shlex`` has no mode that suits Windows. With ``posix=True`` it eats the
+    backslashes in a Windows path; with ``posix=False`` it keeps the quotes
+    *inside* the token, so an interpreter under "Program Files" is looked up
+    with its quotes attached and the run dies with a bare "cannot find the file
+    specified". Quoted paths are the normal case on Windows, not an edge case,
+    so split without posix rules and strip the quotes afterwards.
+    """
+    if os.name != "nt":
+        return shlex.split(command)
+
+    parts = []
+    for token in shlex.split(command, posix=False):
+        if len(token) >= 2 and token[0] == token[-1] and token[0] in "\"'":
+            token = token[1:-1]
+        parts.append(token)
+    return parts
+
+
 class ExternalCommandEngine(VtoEngine):
     """Run a separately installed VTON checkout through a command template.
 
@@ -263,7 +284,7 @@ class ExternalCommandEngine(VtoEngine):
                 steps=request.steps, seed=request.seed if request.seed is not None else 0,
                 color=request.extra.get("color", ""),
             )
-            proc = subprocess.run(shlex.split(command, posix=os.name != "nt"),
+            proc = subprocess.run(_split_command(command),
                                   capture_output=True, text=True, timeout=600)
             if proc.returncode != 0:
                 raise EngineError((proc.stderr or proc.stdout or "")[-2000:])
