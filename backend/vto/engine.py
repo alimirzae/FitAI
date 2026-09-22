@@ -49,7 +49,10 @@ class GenerationRequest:
     garment: Image.Image
     category: str = "upper"
     steps: int = 30
-    guidance: float = 2.5
+    # 2.5 is too weak here: the model ignores the garment image and invents
+    # its own clothing. Measured on a black leather jacket, 2.5 produced a
+    # grey utility shirt while 6.0 reproduced the jacket.
+    guidance: float = 6.0
     seed: Optional[int] = None
     resolution: tuple[int, int] = (768, 1024)
     extra: dict = field(default_factory=dict)
@@ -145,7 +148,7 @@ class DiffusersInpaintEngine(VtoEngine):
         try:
             pipe.load_ip_adapter(self.IP_ADAPTER_REPO, subfolder="models",
                                  weight_name=self.IP_ADAPTER_WEIGHT)
-            pipe.set_ip_adapter_scale(float(os.getenv("FITAI_VTO_IP_SCALE", "0.85")))
+            pipe.set_ip_adapter_scale(float(os.getenv("FITAI_VTO_IP_SCALE", "1.0")))
             self._ip_adapter = True
         except Exception as exc:   # pragma: no cover - network/weights dependent
             # Without IP-Adapter the garment cannot condition the result, and a
@@ -161,8 +164,15 @@ class DiffusersInpaintEngine(VtoEngine):
                 pipe.enable_sequential_cpu_offload()
             else:
                 pipe.to("cuda")
-            pipe.enable_attention_slicing()
+            # Deliberately NOT enable_attention_slicing(): it replaces every
+            # attention processor in the UNet, including the IP-Adapter ones
+            # installed above. The pipeline then still hands the processors a
+            # (text, image) embedding tuple that a plain processor cannot read,
+            # and generation dies inside the first cross-attention block.
+            # torch's scaled_dot_product_attention already keeps this model
+            # within 8 GB at try-on resolutions.
             try:
+                # VAE slicing is safe: it only affects decoding, not attention.
                 pipe.enable_vae_slicing()
             except Exception:
                 pass

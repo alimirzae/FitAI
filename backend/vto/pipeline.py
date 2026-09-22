@@ -65,7 +65,7 @@ def run_tryon(
     engine: Optional[VtoEngine] = None,
     engine_name: str = "auto",
     steps: int = 30,
-    guidance: float = 2.5,
+    guidance: float = 6.0,
     seed: Optional[int] = None,
     resolution: tuple[int, int] = DEFAULT_RESOLUTION,
 ) -> TryOnResult:

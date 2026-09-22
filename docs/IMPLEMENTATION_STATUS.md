@@ -103,8 +103,36 @@ the synthetic reference pose:
   silhouette is now unioned in, with pose deciding only which part of it the
   category owns.
 
-STILL NOT VERIFIED: image generation. The weights could not be downloaded on
-this network. `huggingface.co` is reachable, but every LFS download redirects
+## Generation verified — 2026-09-22
+RTX 4060 Laptop 8 GB, weights mirrored from ModelScope, fully offline.
+
+RUNNABLE: `diffusers-inpaint` produces real photorealistic try-on images.
+9-10 s per image at 576x768 / 34 steps once the pipeline is resident, ~22 s
+including the first load. Face, hair, hands and everything outside the mask
+come back bit-exact from the original photograph.
+
+Two real defects were found and fixed by the first runs:
+- `enable_attention_slicing()` replaced every UNet attention processor,
+  including the IP-Adapter ones, and generation died in the first
+  cross-attention block. It is not used; torch SDPA already fits 8 GB.
+- `guidance_scale` defaulted to 2.5, which was too weak for the garment image
+  to win against the text prompt: a black leather jacket came out as a grey
+  utility shirt. Measured against 6.0, which reproduces the jacket. Default is
+  now 6.0, and IP-Adapter scale 0.85 -> 1.0.
+
+MEASURED LIMIT: garment structure is not reproducible run to run. Across four
+seeds at the corrected settings, three produced a correct sleeved biker jacket
+and one produced a sleeveless leather top. Colour and material transferred in
+all four. This is the expected behaviour of IP-Adapter style conditioning
+rather than a garment-warping VTON model, and it is why the `external` engine
+exists. The try-on screen therefore offers an explicit regenerate button.
+
+A second consequence: where the mask covers the arms so sleeves can be drawn,
+a result that renders bare arms regenerates that skin rather than restoring
+it, so skin tone can shift slightly on those runs.
+
+EARLIER BLOCKER, now resolved: the weights could not be downloaded from
+Hugging Face on this network. `huggingface.co` is reachable, but every LFS download redirects
 to `us.aws.cdn.hf.co`, which refuses the TLS connection - direct, through the
 configured proxy at 127.0.0.1:10808, and under both OpenSSL (Python) and
 schannel (curl). `hf-mirror.com` serves metadata but not LFS either. This is a

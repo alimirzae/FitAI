@@ -34,7 +34,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--engine", default="auto",
                         help="auto, diffusers-inpaint or external")
     parser.add_argument("--steps", type=int, default=30)
-    parser.add_argument("--guidance", type=float, default=2.5)
+    parser.add_argument("--guidance", type=float, default=6.0)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--width", type=int, default=DEFAULT_RESOLUTION[0])
     parser.add_argument("--height", type=int, default=DEFAULT_RESOLUTION[1])

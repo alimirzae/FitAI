@@ -166,8 +166,17 @@ export function SimpleTryOn({ garments, videoRef, isCameraActive, onToggleCamera
               <RefreshCw className="h-4 w-4" /> از اول
             </button>
           )}
-          {stage === 'result' && outcome && (
+          {stage === 'result' && outcome && garment && (
             <>
+              {/* The generator is not deterministic, and roughly one run in
+                  four gets the garment's cut wrong even when its colour and
+                  material are right. Regenerating is the practical fix, so it
+                  needs to be one obvious tap rather than a hidden behaviour of
+                  re-picking the same garment. */}
+              <button onClick={() => runTryOn(garment)}
+                className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-medium text-slate-950">
+                <RefreshCw className="h-4 w-4" /> نسخه‌ی دیگر
+              </button>
               <a href={outcome.imageUrl} download="fitai-tryon.png"
                 className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-slate-200">
                 <Download className="h-4 w-4" /> ذخیره
