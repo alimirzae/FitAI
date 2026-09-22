@@ -1,10 +1,11 @@
 import logging
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from .services.person_analyzer import PersonAnalyzer
 from .services.camera_service import mjpeg_stream
 from .services.system_info import get_system_info
+from .services.render_provider import vto_provider, hair_provider, RenderProviderError
 
 logger=logging.getLogger("fitai")
 app=FastAPI(title="FitAI Local AI Runtime",version="0.5.1")
@@ -32,3 +33,24 @@ async def analyze_person(file:UploadFile=File(...)):
 @app.get("/api/v1/camera/stream")
 def camera_stream(camera:int=0):
     return StreamingResponse(mjpeg_stream(analyzer,camera),media_type="multipart/x-mixed-replace; boundary=frame")
+
+
+@app.get("/api/v1/render/providers")
+def render_providers():
+    return {"vto":vto_provider.status(),"hair":hair_provider.status()}
+
+@app.post("/api/v1/render/vto")
+async def render_vto(person:UploadFile=File(...), garment:UploadFile=File(...)):
+    try:
+        image,latency=vto_provider.render(await person.read(),await garment.read())
+        return Response(content=image,media_type="image/png",headers={"X-FitAI-Latency-Ms":f"{latency:.1f}","X-FitAI-Renderer":"real-vto"})
+    except RenderProviderError as exc:
+        raise HTTPException(status_code=503,detail=str(exc))
+
+@app.post("/api/v1/render/hair")
+async def render_hair(person:UploadFile=File(...), hairstyle:UploadFile=File(...), color:str=""):
+    try:
+        image,latency=hair_provider.render(await person.read(),await hairstyle.read(),color)
+        return Response(content=image,media_type="image/png",headers={"X-FitAI-Latency-Ms":f"{latency:.1f}","X-FitAI-Renderer":"real-hair"})
+    except RenderProviderError as exc:
+        raise HTTPException(status_code=503,detail=str(exc))
