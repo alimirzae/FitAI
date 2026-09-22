@@ -2,6 +2,28 @@ export type OperatingMode = 'fitting_room' | 'storefront' | 'body_engine' | 'sal
 
 export type ClothingCategory = 'upper_body' | 'jackets' | 'dresses' | 'lower_body' | 'full_outfit';
 
+export type FabricType = 'wool' | 'silk' | 'leather' | 'denim' | 'velvet' | 'linen' | 'cotton' | 'technical';
+
+export type TargetAgeGroup = 'all' | 'teen' | 'young_adult' | 'mature' | 'kids';
+
+export type StoreType = 'clothing_boutique' | 'beauty_salon' | 'storefront_kiosk' | 'multi_department';
+
+export interface AppSettings {
+  defaultMode: OperatingMode;
+  storeType: StoreType;
+  language: 'en' | 'fa';
+  storeName: string;
+  enableFabricPhysics: boolean;
+  autoRotateSeconds: number;
+}
+
+export interface GarmentColorOption {
+  id: string;
+  nameEn: string;
+  nameFa: string;
+  hex: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -10,11 +32,50 @@ export interface Product {
   price: number;
   color: string;
   colorHex: string;
+  colorOptions?: GarmentColorOption[];
   sizes: string[];
   imageUrl: string;
   description: string;
   fabric: string;
+  fabricType: FabricType;
+  targetAge: TargetAgeGroup;
+  style: string;
   tags: string[];
+}
+
+export interface CustomerProfile {
+  id: string;
+  name: string;
+  avatarUrl?: string;
+  registeredAt: string;
+  lastVisit: string;
+  visitsCount: number;
+  gender: 'men' | 'women' | 'unisex';
+  estimatedAgeRange: string;
+  recommendedSize: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+  faceEmbedding: number[]; // 8-12 dimensional facial geometry vector
+  bodyMeasurements: {
+    heightCm: number;
+    shoulderCm: number;
+    chestCm: number;
+    waistCm: number;
+  };
+  preferredStyles: string[];
+  favoriteCategories: ClothingCategory[];
+  likedProductIds: string[];
+  notes?: string;
+}
+
+export interface SizeRecommendation {
+  recommendedSize: 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+  confidencePct: number;
+  shoulderCm: number;
+  chestCm: number;
+  waistCm: number;
+  heightCm: number;
+  fitAssessment: 'tight' | 'regular' | 'relaxed';
+  fitAssessmentFa: string;
+  fitAssessmentEn: string;
 }
 
 export interface ModelSubject {
@@ -25,6 +86,7 @@ export interface ModelSubject {
   poseType: 'standing_front' | 'casual_turn' | 'formal';
   height: string;
   estimatedAgeRange: string;
+  faceEmbedding: number[];
 }
 
 export interface PoseLandmark {
@@ -38,14 +100,14 @@ export interface PoseLandmark {
 export interface PersonAnalysis {
   detected: boolean;
   confidence: number;
-  ageGroup: string; // e.g. "25-34"
+  ageGroup: string;
   presentation: 'men' | 'women' | 'unisex';
-  bodyType: string; // "Athletic", "Slender", "Standard"
+  bodyType: string;
   landmarks: PoseLandmark[];
   clothingCategoryDetected: string;
   dominantColor: string;
   faceExpression: 'Positive' | 'Neutral' | 'Engaged' | 'Pensive';
-  expressionScore: number; // 0..1
+  expressionScore: number;
 }
 
 export interface TryOnResult {
@@ -58,12 +120,13 @@ export interface TryOnResult {
   latencyMs: number;
   clothingCategory: ClothingCategory;
   generatedAt: string;
+  appliedColor?: GarmentColorOption;
 }
 
 export interface BodyTransformation {
-  slim: number; // 0.0 to 0.10 (0% to 10%)
-  fitness: number; // 0.0 to 0.10 (0% to 10%)
-  posture: number; // 0.0 to 0.10
+  slim: number;
+  fitness: number;
+  posture: number;
   chestTuning: number;
 }
 
@@ -73,17 +136,17 @@ export interface SalonConfiguration {
   hairColorHex: string;
   hairLength: 'short' | 'medium' | 'long';
   beardStyle: 'none' | 'stubble' | 'sculpted' | 'full';
-  makeupIntensity: number; // 0..1
+  makeupIntensity: number;
   eyebrowStyle: 'natural' | 'defined' | 'arched';
 }
 
 export interface PreferenceSignalBreakdown {
-  explicitLike: boolean | null; // true = like, false = dislike, null = none
+  explicitLike: boolean | null;
   viewingTimeSec: number;
   revisited: boolean;
   interactionCount: number;
   expressionSignal: 'Positive' | 'Neutral' | 'Disengaged';
-  totalScore: number; // 0..1 calculated based on README section 12 formula
+  totalScore: number;
 }
 
 export interface StoreCampaign {

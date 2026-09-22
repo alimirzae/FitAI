@@ -1,33 +1,33 @@
 import React, { useState } from 'react';
 import { AI_MODEL_REGISTRY, REGISTERED_DEVICES, SAMPLE_PRODUCTS } from '../data/catalog';
+import { Language, TRANSLATIONS } from '../i18n/translations';
 import { 
   BarChart3, 
   Cpu, 
-  Layers, 
   Activity, 
   Users, 
   Sparkles, 
   ShieldCheck, 
   Clock, 
-  Heart, 
   CheckCircle2, 
-  AlertCircle,
-  HardDrive
+  AlertCircle
 } from 'lucide-react';
 
 interface AnalyticsPanelProps {
   eventsLog: Array<{ event: string; timestamp: string; details?: any }>;
+  lang: Language;
 }
 
-export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => {
+export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog, lang }) => {
+  const t = TRANSLATIONS[lang];
   const [activeTab, setActiveTab] = useState<'overview' | 'preference_math' | 'models' | 'devices' | 'events'>('overview');
 
   // Anonymous Aggregate Metrics (README Sec 20 & 38)
   const stats = [
-    { label: 'Anonymous Visitors', value: '1,428', change: '+18%', icon: Users, color: 'text-cyan-400' },
-    { label: 'Interacted Visitors', value: '412', change: '28.8%', icon: Activity, color: 'text-indigo-400' },
-    { label: 'Try-On Sessions', value: '236', change: '+24%', icon: Sparkles, color: 'text-emerald-400' },
-    { label: 'Avg Generation Latency', value: '142 ms', change: 'GPU Accel', icon: Clock, color: 'text-amber-400' },
+    { label: t.analytics.anonymousVisitors, value: '1,428', change: '+18%', icon: Users, color: 'text-cyan-400' },
+    { label: t.analytics.interacted, value: '412', change: '28.8%', icon: Activity, color: 'text-indigo-400' },
+    { label: t.analytics.tryOnSessions, value: '236', change: '+24%', icon: Sparkles, color: 'text-emerald-400' },
+    { label: t.analytics.avgLatency, value: '142 ms', change: 'GPU Accel', icon: Clock, color: 'text-amber-400' },
   ];
 
   return (
@@ -38,25 +38,25 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono uppercase font-bold text-cyan-400">
-              Management & Analytics Panel (Sec. 12, 19, 20 & 27)
+              {t.analytics.badge}
             </span>
           </div>
           <h2 className="text-xl font-extrabold text-white mt-1">
-            FitAI Operations & Model Registry
+            {t.analytics.title}
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-xl">
-            Privacy-by-design anonymous engagement metrics, Section 12 preference formula verification, and commercial AI model registry.
+            {t.analytics.description}
           </p>
         </div>
 
         {/* Navigation Tabs */}
         <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
           {[
-            { id: 'overview' as const, label: 'Dashboard Overview' },
-            { id: 'preference_math' as const, label: 'Section 12 Formula' },
-            { id: 'models' as const, label: 'AI Model Registry' },
-            { id: 'devices' as const, label: 'Connected Devices' },
-            { id: 'events' as const, label: 'Session Events' },
+            { id: 'overview' as const, label: t.analytics.overview },
+            { id: 'preference_math' as const, label: t.analytics.formula },
+            { id: 'models' as const, label: t.analytics.models },
+            { id: 'devices' as const, label: t.analytics.devices },
+            { id: 'events' as const, label: t.analytics.events },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -102,9 +102,9 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <BarChart3 className="w-4 h-4 text-cyan-400" />
-                <span>Product Engagement & Preference Matrix (Sec. 38)</span>
+                <span>{t.analytics.matrixTitle}</span>
               </h3>
-              <span className="text-xs text-slate-500 font-mono">Zero biometric data stored</span>
+              <span className="text-xs text-slate-500 font-mono">{t.analytics.zeroBio}</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -112,7 +112,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400 font-mono">
                     <th className="pb-3 font-semibold">PRODUCT</th>
-                    <th className="pb-3 font-semibold">CATEGORY</th>
+                    <th className="pb-3 font-semibold">FABRIC</th>
                     <th className="pb-3 font-semibold">PREVIEWS</th>
                     <th className="pb-3 font-semibold">EXPLICIT LIKES</th>
                     <th className="pb-3 font-semibold">WISHLIST SAVES</th>
@@ -120,7 +120,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {SAMPLE_PRODUCTS.slice(0, 5).map((prod, idx) => {
+                  {SAMPLE_PRODUCTS.slice(0, 6).map((prod, idx) => {
                     const previews = 85 - idx * 12;
                     const likes = 42 - idx * 7;
                     const saves = 18 - idx * 3;
@@ -139,8 +139,8 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
                             <div className="text-[10px] text-slate-500 font-mono">${prod.price}</div>
                           </div>
                         </td>
-                        <td className="py-3 text-slate-400 uppercase font-mono text-[10px]">
-                          {prod.category.replace('_', ' ')}
+                        <td className="py-3 text-cyan-400 uppercase font-mono text-[10px]">
+                          {prod.fabricType}
                         </td>
                         <td className="py-3 font-mono text-slate-200">{previews}</td>
                         <td className="py-3 font-mono text-emerald-400">
@@ -222,7 +222,7 @@ export const AnalyticsPanel: React.FC<AnalyticsPanelProps> = ({ eventsLog }) => 
               </p>
             </div>
             <span className="text-xs px-2.5 py-1 rounded bg-emerald-950 border border-emerald-800 text-emerald-300 font-mono">
-              6 Models Audited
+              {t.analytics.modelsAudited}
             </span>
           </div>
 

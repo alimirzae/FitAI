@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ModelSubject, SalonConfiguration } from '../types';
 import { MODEL_SUBJECTS } from '../data/catalog';
+import { Language, TRANSLATIONS } from '../i18n/translations';
 import { 
   Scissors, 
   Sparkles, 
@@ -8,16 +9,16 @@ import {
   Check, 
   Heart, 
   RotateCcw, 
-  Columns, 
-  Eye, 
-  Layers 
+  Eye 
 } from 'lucide-react';
 
 interface SalonModeProps {
   onLogEvent: (event: string, details?: any) => void;
+  lang: Language;
 }
 
-export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
+export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang }) => {
+  const t = TRANSLATIONS[lang];
   const [selectedModel, setSelectedModel] = useState<ModelSubject>(MODEL_SUBJECTS[0]); // Sophia
   
   const [config, setConfig] = useState<SalonConfiguration>({
@@ -34,30 +35,38 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
   const [activeTab, setActiveTab] = useState<'hair' | 'color' | 'facial_hair' | 'makeup'>('hair');
 
   const hairstyles = [
-    { id: 'style-layered-waves', name: 'Layered Beach Waves', length: 'medium', category: 'all' },
-    { id: 'style-sleek-bob', name: 'Precision French Bob', length: 'short', category: 'all' },
-    { id: 'style-textured-pixie', name: 'Textured Modern Pixie', length: 'short', category: 'women' },
-    { id: 'style-curtain-bangs', name: 'Curtain Bangs Long Cut', length: 'long', category: 'women' },
-    { id: 'style-classic-fade', name: 'Low Taper Fade & Quiff', length: 'short', category: 'men' },
-    { id: 'style-slick-undercut', name: 'Pompadour Undercut', length: 'short', category: 'men' },
+    { id: 'style-layered-waves', nameEn: 'Layered Beach Waves', nameFa: 'موج‌دار لایه‌ای ساحلی', length: 'medium', category: 'all' },
+    { id: 'style-sleek-bob', nameEn: 'Precision French Bob', nameFa: 'باب فرانسوی کلاسیک', length: 'short', category: 'all' },
+    { id: 'style-textured-pixie', nameEn: 'Textured Modern Pixie', nameFa: 'پیکسی مدرن و کوتاه', length: 'short', category: 'women' },
+    { id: 'style-curtain-bangs', nameEn: 'Curtain Bangs Long Cut', nameFa: 'چتری پرده‌ای موی بلند', length: 'long', category: 'women' },
+    { id: 'style-classic-fade', nameEn: 'Low Taper Fade & Quiff', nameFa: 'سایه‌زنی فید و کوئیف مردانه', length: 'short', category: 'men' },
+    { id: 'style-slick-undercut', nameEn: 'Pompadour Undercut', nameFa: 'آندرکات پامپادور', length: 'short', category: 'men' },
+    { id: 'style-curly-afro', nameEn: 'Defined Natural Curls', nameFa: 'فر طبیعی و پرحجم', length: 'medium', category: 'all' },
   ];
 
   const hairColors = [
-    { name: 'Espresso Black', hex: '#1c1917' },
-    { name: 'Chestnut Brown', hex: '#451a03' },
-    { name: 'Honey Blonde', hex: '#d4af37' },
-    { name: 'Platinum Ice', hex: '#e2e8f0' },
-    { name: 'Copper Auburn', hex: '#9a3412' },
-    { name: 'Burgundy Wine', hex: '#881337' },
-    { name: 'Silver Ash', hex: '#94a3b8' },
-    { name: 'Rose Gold Tint', hex: '#f43f5e' },
+    { nameEn: 'Espresso Black', nameFa: 'مشکی اسپرسو', hex: '#1c1917' },
+    { nameEn: 'Chestnut Brown', nameFa: 'قهوه‌ای شاه‌بلوطی', hex: '#451a03' },
+    { nameEn: 'Honey Blonde', nameFa: 'بلوند عسلی', hex: '#d4af37' },
+    { nameEn: 'Platinum Ice', nameFa: 'پلاتینی یخی', hex: '#e2e8f0' },
+    { nameEn: 'Copper Auburn', nameFa: 'مسی فندقی', hex: '#9a3412' },
+    { nameEn: 'Burgundy Wine', nameFa: 'شرابی بورگاندی', hex: '#881337' },
+    { nameEn: 'Silver Ash', nameFa: 'دودی نقره‌ای', hex: '#94a3b8' },
+    { nameEn: 'Rose Gold Tint', nameFa: 'رزگلد پاستلی', hex: '#f43f5e' },
   ];
 
   const beardStyles = [
-    { id: 'none', name: 'Clean Shaved' },
-    { id: 'stubble', name: '5 O’Clock Shadow' },
-    { id: 'sculpted', name: 'Sculpted Goatee' },
-    { id: 'full', name: 'Full Groomed Beard' },
+    { id: 'none', nameEn: 'Clean Shaved', nameFa: 'اصلاح کامل (بدون ریش)' },
+    { id: 'stubble', nameEn: '5 O’Clock Stubble', nameFa: 'ته‌ریش کلاسیک' },
+    { id: 'sculpted', nameEn: 'Sculpted Goatee', nameFa: 'پروفسوری خط‌گیری شده' },
+    { id: 'full', nameEn: 'Full Groomed Beard', nameFa: 'ریش کامل پرپشت' },
+  ];
+
+  const lipsticks = [
+    { nameEn: 'Ruby Velvet', nameFa: 'قرمز مخملی یاقوتی', hex: '#991b1b' },
+    { nameEn: 'Nude Rose', nameFa: 'رز طبیعی ملایم', hex: '#be123c' },
+    { nameEn: 'Deep Berry Plum', nameFa: 'تمشکی ارغوانی', hex: '#701a75' },
+    { nameEn: 'Terracotta Coral', nameFa: 'مرجانی آجری', hex: '#c2410c' },
   ];
 
   return (
@@ -68,20 +77,20 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-mono uppercase font-bold text-pink-400">
-              Beauty Engine & Smart Salon Mode (Sec. 10 & 11)
+              {t.salon.badge}
             </span>
           </div>
           <h2 className="text-xl font-extrabold text-white mt-1">
-            Hairstyle & Color Simulation
+            {t.salon.title}
           </h2>
           <p className="text-xs text-slate-400 mt-1 max-w-xl">
-            Virtual try-on for hair cuts, dye colors, facial hair, and cosmetics with photorealistic edge & volume alignment.
+            {t.salon.description}
           </p>
         </div>
 
         {/* Model Selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Client:</span>
+          <span className="text-xs text-slate-400">{t.salon.client}</span>
           <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
             {MODEL_SUBJECTS.map((model) => (
               <button
@@ -113,10 +122,10 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-col shadow-xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono font-bold text-slate-400 uppercase">
-                  Before (Current)
+                  {t.salon.before}
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                  Natural
+                  {t.salon.natural}
                 </span>
               </div>
               <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
@@ -133,10 +142,12 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-mono font-bold text-pink-400 uppercase flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-pink-400" />
-                  <span>After (Virtual Look)</span>
+                  <span>{t.salon.after}</span>
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-pink-950 text-pink-300 font-mono border border-pink-800/60">
-                  {config.hairColor}
+                  {lang === 'fa' 
+                    ? hairColors.find(c => c.nameEn === config.hairColor)?.nameFa 
+                    : config.hairColor}
                 </span>
               </div>
               <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group">
@@ -159,14 +170,20 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-white">
-                        {hairstyles.find((h) => h.id === config.hairstyleId)?.name}
+                        {lang === 'fa'
+                          ? hairstyles.find((h) => h.id === config.hairstyleId)?.nameFa
+                          : hairstyles.find((h) => h.id === config.hairstyleId)?.nameEn}
                       </div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                         <span 
                           className="w-2.5 h-2.5 rounded-full border border-slate-700 inline-block"
                           style={{ backgroundColor: config.hairColorHex }}
                         />
-                        <span>{config.hairColor} • {config.hairLength.toUpperCase()}</span>
+                        <span>
+                          {lang === 'fa' 
+                            ? hairColors.find(c => c.nameEn === config.hairColor)?.nameFa 
+                            : config.hairColor} • {config.hairLength.toUpperCase()}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -192,7 +209,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                 }`}
               >
                 <Heart className={`w-3.5 h-3.5 ${isSaved ? 'fill-white' : ''}`} />
-                <span>{isSaved ? 'Style Saved' : 'Save as Favorite'}</span>
+                <span>{isSaved ? t.salon.saved : t.salon.saveFavorite}</span>
               </button>
 
               <button
@@ -200,8 +217,8 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                 onClick={() => {
                   setConfig({
                     hairstyleId: 'style-layered-waves',
-                    hairColor: 'Espresso Black',
-                    hairColorHex: '#1c1917',
+                    hairColor: 'Honey Blonde',
+                    hairColorHex: '#d4af37',
                     hairLength: 'medium',
                     beardStyle: 'none',
                     makeupIntensity: 0.3,
@@ -212,7 +229,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                 className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 flex items-center gap-1"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset</span>
+                <span>{t.salon.reset}</span>
               </button>
             </div>
 
@@ -230,10 +247,10 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
             {/* Salon Feature Sub-Tabs */}
             <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
               {[
-                { id: 'hair' as const, label: 'Hairstyle', icon: Scissors },
-                { id: 'color' as const, label: 'Hair Color', icon: Palette },
-                { id: 'facial_hair' as const, label: 'Beard / Grooming', icon: Eye },
-                { id: 'makeup' as const, label: 'Cosmetics', icon: Sparkles },
+                { id: 'hair' as const, label: t.salon.tabs.hair, icon: Scissors },
+                { id: 'color' as const, label: t.salon.tabs.color, icon: Palette },
+                { id: 'facial_hair' as const, label: t.salon.tabs.facial_hair, icon: Eye },
+                { id: 'makeup' as const, label: t.salon.tabs.makeup, icon: Sparkles },
               ].map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -258,7 +275,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
             {activeTab === 'hair' && (
               <div className="space-y-2.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                  Select Cut & Silhouette:
+                  {t.salon.selectCut}
                 </span>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
                   {hairstyles.map((hair) => {
@@ -269,7 +286,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                         id={`hair-opt-${hair.id}`}
                         onClick={() => {
                           setConfig({ ...config, hairstyleId: hair.id, hairLength: hair.length as any });
-                          onLogEvent('HAIRSTYLE_CHANGED', { hairstyle: hair.name });
+                          onLogEvent('HAIRSTYLE_CHANGED', { hairstyle: hair.nameEn });
                         }}
                         className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
                           isSelected
@@ -278,9 +295,11 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                         }`}
                       >
                         <div>
-                          <div className="text-xs font-semibold">{hair.name}</div>
+                          <div className="text-xs font-semibold">
+                            {lang === 'fa' ? hair.nameFa : hair.nameEn}
+                          </div>
                           <div className="text-[10px] text-slate-500 uppercase mt-0.5">
-                            Length: {hair.length}
+                            {hair.length}
                           </div>
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-pink-400" />}
@@ -295,18 +314,18 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
             {activeTab === 'color' && (
               <div className="space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                  Dye Tint & Pigment:
+                  {t.salon.dyePigment}
                 </span>
                 <div className="grid grid-cols-2 gap-2.5 max-h-[300px] overflow-y-auto pr-1">
                   {hairColors.map((color) => {
-                    const isSelected = config.hairColor === color.name;
+                    const isSelected = config.hairColor === color.nameEn;
                     return (
                       <div
-                        key={color.name}
-                        id={`color-opt-${color.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        key={color.nameEn}
+                        id={`color-opt-${color.nameEn.toLowerCase().replace(/\s+/g, '-')}`}
                         onClick={() => {
-                          setConfig({ ...config, hairColor: color.name, hairColorHex: color.hex });
-                          onLogEvent('HAIR_COLOR_CHANGED', { color: color.name });
+                          setConfig({ ...config, hairColor: color.nameEn, hairColorHex: color.hex });
+                          onLogEvent('HAIR_COLOR_CHANGED', { color: color.nameEn });
                         }}
                         className={`p-2.5 rounded-xl border cursor-pointer flex items-center gap-2.5 transition-all ${
                           isSelected
@@ -318,7 +337,9 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                           className="w-5 h-5 rounded-full border border-slate-700 shadow-sm shrink-0"
                           style={{ backgroundColor: color.hex }}
                         />
-                        <span className="text-xs font-medium truncate">{color.name}</span>
+                        <span className="text-xs font-medium truncate">
+                          {lang === 'fa' ? color.nameFa : color.nameEn}
+                        </span>
                       </div>
                     );
                   })}
@@ -330,7 +351,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
             {activeTab === 'facial_hair' && (
               <div className="space-y-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block">
-                  Facial Hair & Beard Grooming:
+                  {t.salon.facialGrooming}
                 </span>
                 <div className="space-y-2">
                   {beardStyles.map((beard) => {
@@ -341,7 +362,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                         id={`beard-opt-${beard.id}`}
                         onClick={() => {
                           setConfig({ ...config, beardStyle: beard.id as any });
-                          onLogEvent('BEARD_STYLE_CHANGED', { style: beard.name });
+                          onLogEvent('BEARD_STYLE_CHANGED', { style: beard.nameEn });
                         }}
                         className={`p-3 rounded-xl border cursor-pointer flex items-center justify-between transition-all ${
                           isSelected
@@ -349,7 +370,9 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                             : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        <span className="text-xs font-semibold">{beard.name}</span>
+                        <span className="text-xs font-semibold">
+                          {lang === 'fa' ? beard.nameFa : beard.nameEn}
+                        </span>
                         {isSelected && <Check className="w-4 h-4 text-pink-400" />}
                       </div>
                     );
@@ -358,12 +381,12 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
               </div>
             )}
 
-            {/* Tab Content 4: Makeup Intensity */}
+            {/* Tab Content 4: Makeup & Cosmetics */}
             {activeTab === 'makeup' && (
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-semibold text-slate-200">Makeup Intensity</span>
+                    <span className="font-semibold text-slate-200">{t.salon.makeupIntensity}</span>
                     <span className="font-mono text-pink-400 font-bold">
                       {(config.makeupIntensity * 100).toFixed(0)}%
                     </span>
@@ -380,9 +403,30 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent }) => {
                   />
                 </div>
 
+                {/* Lipstick Palette */}
                 <div className="pt-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                    Eyebrow Styling:
+                    {lang === 'fa' ? 'رنگ رژ لب و براق‌کننده:' : 'Lipstick & Gloss Tint:'}
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {lipsticks.map((lip) => (
+                      <div
+                        key={lip.nameEn}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 cursor-pointer hover:border-pink-500/50"
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-full shrink-0 border border-slate-700"
+                          style={{ backgroundColor: lip.hex }}
+                        />
+                        <span className="truncate">{lang === 'fa' ? lip.nameFa : lip.nameEn}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-2">
+                    {t.salon.eyebrows}
                   </span>
                   <div className="grid grid-cols-3 gap-2">
                     {['natural', 'defined', 'arched'].map((style) => (
