@@ -53,3 +53,6 @@ Do not reintroduce flat torso polygons or painted hair as if they were realistic
 
 ## Live runtime resilience — 2026-09-22
 A frontend-only camera is not sufficient: startup must verify backend health. Do not make garment visibility depend on a single inference request. Keep live pose/face payloads small, serialize MediaPipe Solution access, and use graceful visual fallback. Hair color preview may preserve real camera texture, but it must not be described as hairstyle synthesis.
+
+## Photorealistic rendering decision — 2026-09-22
+Canvas/SVG overlays are diagnostic only and must not be presented as VTO. Production uses real model providers via /api/v1/render/vto and /api/v1/render/hair. P1000 runs tracking/reprojection; neural synthesis is keyframe/worker based. Physically accurate cloth requires garment mesh/pattern plus material parameters. Do not bundle NC VTO checkpoints in commercial FitAI.
