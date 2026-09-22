@@ -98,3 +98,12 @@ A feature is DONE only when a real implementation exists, can be executed from a
 - DONE resilient garment fallback: local garment remains visible if an inference request temporarily fails; real pose takes over automatically when API recovers
 - DONE MediaPipe inference serialization for concurrent live/salon access
 - DONE live hair-color preview preserving camera texture; photorealistic hairstyle synthesis remains TODO
+
+## Phase 4B — Photorealistic renderer
+- DONE real-model provider API for VTO and hair transfer; no fake renderer fallback
+- DONE document two-rate realtime + photorealistic keyframe architecture
+- TODO connect a commercially licensed VTO checkpoint after legal/model audit
+- TODO connect audited HairFastGAN-compatible weights/provider
+- TODO garment front/back alpha asset ingestion
+- TODO temporal reprojection of synthesized keyframes
+- TODO 3D garment mesh/material path for physically correct cloth simulation
