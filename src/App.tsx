@@ -90,7 +90,7 @@ export function App() {
       onCanPlay={(e)=>{ const v=e.currentTarget; console.info('[FitAI] VIDEO_CAN_PLAY',{readyState:v.readyState,width:v.videoWidth,height:v.videoHeight}); }}
       onError={(e)=>console.error('[FitAI] VIDEO_ELEMENT_ERROR',e)}
       className="fixed left-0 top-0 w-px h-px opacity-[0.01] pointer-events-none" />
-    <SettingsModal isOpen={isSettingsOpen} onClose={()=>setIsSettingsOpen(false)} settings={settings} onSave={handleSaveSettings} lang={settings.language}/>
+    <SettingsModal isOpen={isSettingsOpen} onClose={()=>setIsSettingsOpen(false)} settings={settings} onSaveSettings={handleSaveSettings} lang={settings.language}/>
   </div>;
 }
 export default App;
