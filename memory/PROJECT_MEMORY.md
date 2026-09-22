@@ -36,3 +36,11 @@ Planned Kinect/RGB-D uses include person distance, depth-assisted segmentation, 
 Keep the immediate low-resource path deterministic: real MediaPipe pose drives articulated torso/sleeve AR. Never treat full-person catalog photography as a garment texture. Next implement an isolated transparent garment/mask contract and piecewise affine/TPS warping, then optional generative VTO.
 
 Salon uses real Face Mesh geometry for a scalp-guided preview. This is not semantic hair segmentation; a reviewed hair-mask provider is required before claiming pixel-level hair detection. Generative hairstyle transfer remains a separate optional provider.
+
+
+## Complete Look v1 — 2026-09-22
+The first concrete appearance assets are Classic Shirt v1 and Classic Short Hair v1, both repository-owned SVG assets. Shirt rendering uses real pose anchors and articulated sleeves; hair rendering uses live face geometry. They are local deterministic AR, not generative AI. Keep labels truthful.
+
+A critical rendering rule is now fixed: never force webcam frames into a 3:4/720x960 canvas. Canvas dimensions must follow the actual camera videoWidth/videoHeight and preserve natural aspect ratio. This fixed the visibly tall/stretched person in fitting-room mode.
+
+Next appearance milestone is generalized isolated-garment preprocessing + mask contract, occlusion-aware/TPS warp, and semantic hair segmentation. Only after those baselines are stable should heavy generative VTO/hair providers be enabled.
