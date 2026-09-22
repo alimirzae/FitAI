@@ -57,3 +57,11 @@ RGB-D is an enhancement, not a prerequisite: clean installation and normal opera
 4. Optional heavy generative VTO/hair workers only after license and target-hardware review.
 
 The UI must distinguish these layers. Deterministic AR is not generative VTO. Face-Mesh-guided scalp geometry is not semantic hair segmentation.
+
+
+## Complete Look v1 renderer
+The first runnable appearance assets are stored locally under `public/assets/garments` and `public/assets/hair`. Classic Shirt v1 is a transparent garment torso asset combined with articulated sleeve geometry from shoulder/elbow/wrist landmarks. Classic Short Hair v1 is a transparent hairstyle asset positioned from live face geometry and color-tinted in Canvas.
+
+Camera pixels are never stretched to a fixed portrait canvas. Canvas backing dimensions are synchronized to the real camera `videoWidth/videoHeight`; CSS uses natural aspect presentation. Future garment and hair providers must preserve this coordinate contract.
+
+UI capabilities implemented around this renderer include product/color selection, fit opacity, live AI telemetry, before/after Salon view, hairstyle/color selection, snapshot and fullscreen. These deterministic AR renderers are a fast local layer beneath future TPS and optional generative providers.
