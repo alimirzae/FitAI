@@ -15,14 +15,28 @@
 
 Current reference camera: **built-in laptop webcam / standard USB RGB webcam**. Kinect v2 and other RGB-D cameras are planned providers and are intentionally not required by the current installation.
 
-Prerequisites: Git, Python 3.11, Node.js 20+.
+Prerequisites: Git, **Python 3.11 or 3.12**, Node.js 20+.
+
+Check Python first:
+
+```powershell
+py --list
+```
+
+If no compatible runtime is listed, install Python 3.11. With the current Python Install Manager:
+
+```powershell
+py install 3.11
+```
+
+Then close PowerShell, open a new PowerShell window, and run FitAI again. The startup script now detects Python, stops cleanly when it is missing, and works whether launched from the repository root or from inside the `scripts` directory.
 
 ## Clone / first install
 
 ```powershell
 git clone https://github.com/alimirzae/FitAI.git
 cd FitAI
-powershell -ExecutionPolicy Bypass -File scripts\\run-local.ps1
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 ```
 
 The script creates the Python virtual environment, installs backend requirements, installs npm dependencies when needed, and starts the local services.
@@ -32,7 +46,7 @@ The script creates the Python virtual environment, installs backend requirements
 ```powershell
 cd FitAI
 git pull origin main
-powershell -ExecutionPolicy Bypass -File scripts\\run-local.ps1
+powershell -ExecutionPolicy Bypass -File scripts\start-local.ps1
 ```
 
 Default local addresses:
