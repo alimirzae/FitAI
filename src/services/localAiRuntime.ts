@@ -1,5 +1,5 @@
 import { PoseLandmark } from '../types';
-export interface LocalPersonAnalysis {detected:boolean;confidence:number;latency_ms:number;landmarks:PoseLandmark[];faces:Array<{x:number;y:number;width:number;height:number;confidence:number}>;face_mesh?:Array<Array<{index:number;x:number;y:number;z:number}>>;segmentation?:{foreground_ratio:number;mean_confidence:number}|null;body?:Record<string,number|null>;capabilities:Record<string,boolean>;notes:string[];}
+export interface LocalPersonAnalysis {detected:boolean;confidence:number;latency_ms:number;landmarks:PoseLandmark[];faces:Array<{x:number;y:number;width:number;height:number;confidence:number}>;face_mesh?:Array<Array<{index:number;x:number;y:number;z:number}>>;segmentation?:{foreground_ratio:number;mean_confidence:number;mask_png_base64?:string|null}|null;body?:Record<string,number|null>;capabilities:Record<string,boolean>;notes:string[];}
 const BASE=import.meta.env.VITE_FITAI_API_URL||'http://127.0.0.1:8000';
 async function checked(r:Response){if(!r.ok)throw new Error(`${r.status} ${r.statusText}: ${await r.text()}`);return r;}
 export async function analyzeImage(file:Blob):Promise<LocalPersonAnalysis>{const body=new FormData();body.append('file',file,'frame.jpg');const r=await checked(await fetch(`${BASE}/api/v1/person/analyze`,{method:'POST',body}));return r.json();}
