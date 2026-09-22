@@ -72,19 +72,12 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
     const analysis=liveAnalysis;if(!analysis)return;
     const draw=(c:HTMLCanvasElement|null,after:boolean)=>{
       if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
-      const face=analysis.faces?.[0];
-      if(!face)return;
-      const fx=(1-face.x-face.width)*c.width, fy=face.y*c.height, fw=face.width*c.width, fh=face.height*c.height;
+      const face=analysis.faces?.[0];if(!face)return;
+      // Keep live analysis truthful. A real hairstyle provider will render into the AFTER layer.
+      // Until then we only show a subtle face guide in BEFORE; no painted/cartoon hair is fabricated.
       if(!after){
-        ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;ctx.strokeRect(fx,fy,fw,fh);
-        return;
-      }
-      // Classic Short Hair v1: isolated transparent local hairstyle fitted to the detected head.
-      const img=hairAssetRef.current;
-      if(img?.complete){
-        const hw=fw*1.62, hh=fh*.82, hx=fx+fw/2-hw/2, hy=fy-fh*.52;
-        ctx.save();ctx.globalAlpha=.96;ctx.drawImage(img,hx,hy,hw,hh);
-        ctx.globalCompositeOperation='source-atop';ctx.globalAlpha=.48;ctx.fillStyle=config.hairColorHex;ctx.fillRect(hx,hy,hw,hh);ctx.restore();
+        const x=(1-face.x-face.width)*c.width,y=face.y*c.height,w=face.width*c.width,h=face.height*c.height;
+        ctx.save();ctx.strokeStyle='rgba(34,211,238,.42)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.strokeRect(x,y,w,h);ctx.restore();
       }
     };
     draw(overlayRef.current,false);draw(afterOverlayRef.current,true);
@@ -225,9 +218,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-white">
-                        {lang === 'fa'
-                          ? hairstyles.find((h) => h.id === config.hairstyleId)?.nameFa
-                          : hairstyles.find((h) => h.id === config.hairstyleId)?.nameEn}
+                        {lang === 'fa' ? 'پیش‌نمایش واقعی پس از نصب مدل مولد مو' : 'Real preview requires a hairstyle synthesis provider'}
                       </div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                         <span 
@@ -289,7 +280,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
             </div>
 
             <span className="text-[11px] text-slate-400 font-mono">
-              MediaPipe Face + Classic Short Hair v1 • LOCAL AR
+              MediaPipe Face Mesh • HAIRSTYLE PROVIDER NOT INSTALLED
             </span>
           </div>
         </div>
