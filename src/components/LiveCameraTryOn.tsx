@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Product, GarmentColorOption, PoseLandmark, FabricType } from '../types';
 import { Camera, RefreshCw, Sparkles, Check, Sliders, Layers, AlertCircle } from 'lucide-react';
 import { Language, TRANSLATIONS } from '../i18n/translations';
+import { analyzeVideoFrame } from '../services/localAiRuntime';
 
 interface LiveCameraTryOnProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -31,6 +32,31 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   const [cpuLatencyMs, setCpuLatencyMs] = useState<number>(16);
   const [blendOpacity, setBlendOpacity] = useState<number>(0.92);
   const [showWireframe, setShowWireframe] = useState<boolean>(true);
+  const [runtimeLandmarks, setRuntimeLandmarks] = useState<PoseLandmark[]>([]);
+  const [aiOnline, setAiOnline] = useState<boolean>(false);
+
+  // Real local inference loop. Rendering remains 60 FPS while inference is throttled
+  // for CPU-friendly operation on the target P1000 workstation.
+  useEffect(() => {
+    if (!isCameraActive) { setRuntimeLandmarks([]); setAiOnline(false); return; }
+    let cancelled = false;
+    let busy = false;
+    const timer = window.setInterval(async () => {
+      const video = videoRef.current;
+      if (!video || video.readyState < 2 || busy) return;
+      busy = true;
+      try {
+        const result = await analyzeVideoFrame(video);
+        if (!cancelled) {
+          setRuntimeLandmarks(result.landmarks || []);
+          setAiOnline(true);
+        }
+      } catch {
+        if (!cancelled) setAiOnline(false);
+      } finally { busy = false; }
+    }, 125);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [isCameraActive, videoRef]);
 
   // Preload garment image
   useEffect(() => {
@@ -68,10 +94,11 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
 
           // 2. Torso & Shoulder Tracking from Landmarks
           // Default normalized anchor coordinates if landmarks update
-          const leftShoulder = landmarks.find((l) => l.name === 'left_shoulder') || { x: 0.38, y: 0.32 };
-          const rightShoulder = landmarks.find((l) => l.name === 'right_shoulder') || { x: 0.62, y: 0.32 };
-          const leftHip = landmarks.find((l) => l.name === 'left_hip') || { x: 0.42, y: 0.60 };
-          const rightHip = landmarks.find((l) => l.name === 'right_hip') || { x: 0.58, y: 0.60 };
+          const activeLandmarks = runtimeLandmarks.length ? runtimeLandmarks : landmarks;
+          const leftShoulder = activeLandmarks.find((l) => l.name === 'left_shoulder') || { x: 0.38, y: 0.32 };
+          const rightShoulder = activeLandmarks.find((l) => l.name === 'right_shoulder') || { x: 0.62, y: 0.32 };
+          const leftHip = activeLandmarks.find((l) => l.name === 'left_hip') || { x: 0.42, y: 0.60 };
+          const rightHip = activeLandmarks.find((l) => l.name === 'right_hip') || { x: 0.58, y: 0.60 };
 
           // In mirrored video: left shoulder appears on the right side of frame
           const shoulderMidX = ((1 - leftShoulder.x) + (1 - rightShoulder.x)) / 2 * width;
@@ -181,7 +208,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks]);
+  }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks, runtimeLandmarks]);
 
   return (
     <div className="relative aspect-[3/4] w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between">
@@ -225,6 +252,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span>{lang === 'fa' ? 'پرو زنده لایو' : 'Live Stream Try-On'}</span>
             <span className="text-cyan-400 font-bold">{fps} FPS</span>
+            <span className={aiOnline ? 'text-emerald-400' : 'text-rose-400'}>{aiOnline ? 'AI REAL' : 'AI OFFLINE'}</span>
             <span className="text-slate-500">|</span>
             <span className="text-amber-400">{cpuLatencyMs}ms CPU</span>
           </div>
