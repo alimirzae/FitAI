@@ -50,3 +50,6 @@ Next appearance milestone is generalized isolated-garment preprocessing + mask c
 User rejected the old dashboard-heavy UI and the polygon/cartoon appearance overlays. Fitting Room should follow the cleaner approved concept: large central mirror, restrained catalog panel, selected-look panel, less telemetry clutter.
 
 Do not reintroduce flat torso polygons or painted hair as if they were realistic try-on. Garment baseline now uses the real person segmentation mask plus a transparent garment compositor. Hair transformation stays disabled until a real reviewed segmentation/synthesis provider is available. The quality target is photographic, not illustrative.
+
+## Live runtime resilience — 2026-09-22
+A frontend-only camera is not sufficient: startup must verify backend health. Do not make garment visibility depend on a single inference request. Keep live pose/face payloads small, serialize MediaPipe Solution access, and use graceful visual fallback. Hair color preview may preserve real camera texture, but it must not be described as hairstyle synthesis.
