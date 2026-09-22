@@ -1,0 +1,6 @@
+{
+  "name": "FitAI - Smart Mirror & Virtual Try-On",
+  "description": "Intelligent computer-vision and AI platform for virtual try-on, smart mirrors, salon styling, and interactive storefronts.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
