@@ -51,14 +51,17 @@ export function App() {
       const video=videoRef.current;
       if(!video) throw new Error('Global video element is not mounted.');
       video.srcObject=stream;
-      await video.play();
-      await new Promise<void>((resolve,reject)=>{
-        if(video.videoWidth>0&&video.videoHeight>0){resolve();return}
-        const timeout=window.setTimeout(()=>reject(new Error('Camera opened but no video frames arrived within 5 seconds.')),5000);
-        video.onloadedmetadata=()=>{window.clearTimeout(timeout);video.play().then(()=>resolve()).catch(reject)};
-      });
+      // Mark the camera active as soon as the browser gives us a live track.
+      // Waiting for metadata before mounting the live view created a deadlock-like UX
+      // on some Windows/Chrome webcam drivers.
       setIsCameraActive(true);
-      logEvent('CAMERA_STARTED',{width:video.videoWidth,height:video.videoHeight,tracks:stream.getVideoTracks().map(t=>t.label)});
+      logEvent('CAMERA_STREAM_ACQUIRED',{tracks:stream.getVideoTracks().map(t=>({label:t.label,state:t.readyState,settings:t.getSettings()}))});
+      try { await video.play(); } catch (playError) { console.warn('[FitAI] VIDEO_PLAY_DEFERRED',playError); }
+      const reportReady=()=>{
+        console.info('[FitAI] VIDEO_READY',{readyState:video.readyState,width:video.videoWidth,height:video.videoHeight,paused:video.paused});
+        logEvent('CAMERA_VIDEO_READY',{width:video.videoWidth,height:video.videoHeight,readyState:video.readyState});
+      };
+      if(video.videoWidth>0) reportReady(); else video.onloadedmetadata=reportReady;
     }catch(err:any){
       const message=err?.message||String(err); setCameraError(message); setIsCameraActive(false);
       console.error('[FitAI] CAMERA_FAILED',err); logEvent('CAMERA_FAILED',{message});
@@ -82,7 +85,10 @@ export function App() {
       {currentMode==='salon'&&<SalonMode onLogEvent={logEvent} lang={settings.language}/>}
       {currentMode==='analytics'&&<AnalyticsPanel eventsLog={eventsLog} lang={settings.language}/>}
     </main>
-    <video ref={videoRef} autoPlay playsInline muted className="fixed -left-[9999px] top-0 w-[640px] h-[480px]" />
+    <video ref={videoRef} autoPlay playsInline muted
+      onCanPlay={(e)=>{ const v=e.currentTarget; console.info('[FitAI] VIDEO_CAN_PLAY',{readyState:v.readyState,width:v.videoWidth,height:v.videoHeight}); }}
+      onError={(e)=>console.error('[FitAI] VIDEO_ELEMENT_ERROR',e)}
+      className="fixed left-0 top-0 w-px h-px opacity-[0.01] pointer-events-none" />
     <SettingsModal isOpen={isSettingsOpen} onClose={()=>setIsSettingsOpen(false)} settings={settings} onSave={handleSaveSettings} lang={settings.language}/>
   </div>;
 }

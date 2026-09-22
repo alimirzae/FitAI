@@ -36,6 +36,8 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   const [aiOnline, setAiOnline] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiLatency, setAiLatency] = useState<number | null>(null);
+  const [videoStatus, setVideoStatus] = useState<string>('idle');
+  const requestCount = useRef(0);
 
   // Real local inference loop. Rendering remains 60 FPS while inference is throttled
   // for CPU-friendly operation on the target P1000 workstation.
@@ -45,8 +47,16 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     let busy = false;
     const timer = window.setInterval(async () => {
       const video = videoRef.current;
-      if (!video || video.readyState < 2 || busy) return;
+      if (!video) { setVideoStatus('missing-video'); return; }
+      if (video.readyState < 2 || !video.videoWidth) {
+        setVideoStatus(`waiting rs=${video.readyState} ${video.videoWidth}x${video.videoHeight}`);
+        return;
+      }
+      if (busy) return;
+      setVideoStatus(`ready ${video.videoWidth}x${video.videoHeight}`);
       busy = true;
+      requestCount.current += 1;
+      if (requestCount.current === 1 || requestCount.current % 20 === 0) console.info('[FitAI] AI_FRAME_POST',{request:requestCount.current,size:`${video.videoWidth}x${video.videoHeight}`});
       try {
         const result = await analyzeVideoFrame(video);
         if (!cancelled) {
@@ -261,6 +271,8 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             <span className="text-slate-500">|</span>
             <span className="text-amber-400">{cpuLatencyMs}ms render</span>
             <span className="text-cyan-400">{aiLatency === null ? '--' : aiLatency + 'ms AI'}</span>
+            <span className="text-slate-400">{videoStatus}</span>
+            <span className="text-slate-500">POST#{requestCount.current}</span>
           {aiError && <span className="max-w-[220px] truncate text-rose-300" title={aiError}>{aiError}</span>}
           </div>
 
