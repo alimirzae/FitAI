@@ -95,7 +95,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   useEffect(() => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.src = selectedProduct.imageUrl;
+    img.src = '/assets/garments/classic-shirt-v1.svg';
     img.onload = () => {
       garmentImgRef.current = img;
     };
@@ -138,8 +138,8 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
           const shoulderMidY = ((leftShoulder.y + rightShoulder.y) / 2) * height;
           const hipMidY = ((leftHip.y + rightHip.y) / 2) * height;
 
-          const shoulderSpan = Math.abs((1 - leftShoulder.x) - (1 - rightShoulder.x)) * width * 1.55;
-          const torsoLength = Math.max(120, (hipMidY - shoulderMidY) * 1.6);
+          const shoulderSpan = Math.abs((1 - leftShoulder.x) - (1 - rightShoulder.x)) * width * 1.08;
+          const torsoLength = Math.max(120, (hipMidY - shoulderMidY) * 1.03);
 
           // 3. Visible real CV overlay: draw MediaPipe skeleton so detection is observable.
           if (runtimeLandmarks.length) {
@@ -151,24 +151,33 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             ctx.restore();
           }
 
-          // 4. Pose-aware articulated garment baseline: torso + independent sleeves.
-          // Deterministic real-time AR; not generative VTO.
+          // 4. Classic Shirt v1 — local transparent garment asset + articulated sleeves.
           if (runtimeLandmarks.length) {
             const byName=new Map(runtimeLandmarks.map(p=>[p.name,p]));
             const pt=(name:string)=>{const p=byName.get(name);return p?{x:(1-p.x)*width,y:p.y*height}:null};
             const ls=pt('left_shoulder'),rs=pt('right_shoulder'),lh=pt('left_hip'),rh=pt('right_hip');
             const le=pt('left_elbow'),re=pt('right_elbow'),lw=pt('left_wrist'),rw=pt('right_wrist');
             if(ls&&rs&&lh&&rh){
-              const color=selectedColor?.hex||selectedProduct.colorHex||'#334155';
-              ctx.save();ctx.globalAlpha=.82;ctx.fillStyle=color;ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=2;
-              const sx=(ls.x+rs.x)/2,sy=(ls.y+rs.y)/2,neck=Math.abs(ls.x-rs.x)*.14;
-              ctx.beginPath();ctx.moveTo(ls.x,ls.y);ctx.lineTo(sx-neck,sy);ctx.quadraticCurveTo(sx,sy+18,sx+neck,sy);
-              ctx.lineTo(rs.x,rs.y);ctx.lineTo(rh.x,rh.y);ctx.lineTo(lh.x,lh.y);ctx.closePath();ctx.fill();ctx.stroke();
-              const sleeve=(p0:any,p1:any,p2:any)=>{if(!p0||!p1)return;const dx=p1.x-p0.x,dy=p1.y-p0.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;
-                const w0=Math.max(16,shoulderSpan*.11),w1=Math.max(12,w0*.68);ctx.beginPath();ctx.moveTo(p0.x+nx*w0,p0.y+ny*w0);ctx.lineTo(p1.x+nx*w1,p1.y+ny*w1);
-                if(p2){const dx2=p2.x-p1.x,dy2=p2.y-p1.y,l2=Math.hypot(dx2,dy2)||1,nx2=-dy2/l2,ny2=dx2/l2,w2=Math.max(9,w1*.65);ctx.lineTo(p2.x+nx2*w2,p2.y+ny2*w2);ctx.lineTo(p2.x-nx2*w2,p2.y-ny2*w2);}
-                ctx.lineTo(p1.x-nx*w1,p1.y-ny*w1);ctx.lineTo(p0.x-nx*w0,p0.y-ny*w0);ctx.closePath();ctx.fill();ctx.stroke();};
-              sleeve(ls,le,lw);sleeve(rs,re,rw);ctx.restore();
+              const topY=Math.min(ls.y,rs.y)-Math.abs(ls.x-rs.x)*.035;
+              const bottomY=Math.max(lh.y,rh.y)+Math.abs(ls.x-rs.x)*.035;
+              const leftX=Math.min(ls.x,lh.x)-Math.abs(ls.x-rs.x)*.08;
+              const rightX=Math.max(rs.x,rh.x)+Math.abs(ls.x-rs.x)*.08;
+              const color=selectedColor?.hex||selectedProduct.colorHex||'#dbeafe';
+              // Torso uses an actual transparent local garment asset.
+              if(garmentImgRef.current?.complete){
+                ctx.save();ctx.globalAlpha=blendOpacity;
+                ctx.drawImage(garmentImgRef.current,leftX,topY,rightX-leftX,bottomY-topY);
+                ctx.globalCompositeOperation='multiply';ctx.globalAlpha=.22;ctx.fillStyle=color;ctx.fillRect(leftX,topY,rightX-leftX,bottomY-topY);ctx.restore();
+              }
+              // Sleeves are articulated independently along shoulder/elbow/wrist.
+              const sleeve=(p0:any,p1:any,p2:any)=>{
+                if(!p0||!p1)return;const pts=[p0,p1,...(p2?[p2]:[])];ctx.save();ctx.globalAlpha=.9;ctx.fillStyle=color;ctx.strokeStyle='rgba(148,163,184,.85)';ctx.lineWidth=2;
+                const widths=[Math.max(18,shoulderSpan*.14),Math.max(14,shoulderSpan*.105),Math.max(10,shoulderSpan*.075)];
+                const left:any[]=[],right:any[]=[];for(let i=0;i<pts.length;i++){const prev=pts[Math.max(0,i-1)],next=pts[Math.min(pts.length-1,i+1)],dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;left.push({x:pts[i].x+nx*widths[i],y:pts[i].y+ny*widths[i]});right.push({x:pts[i].x-nx*widths[i],y:pts[i].y-ny*widths[i]});}
+                ctx.beginPath();ctx.moveTo(left[0].x,left[0].y);for(const p of left.slice(1))ctx.lineTo(p.x,p.y);for(const p of right.reverse())ctx.lineTo(p.x,p.y);ctx.closePath();ctx.fill();ctx.stroke();
+                ctx.globalAlpha=.25;ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);if(p2)ctx.lineTo(p2.x,p2.y);ctx.stroke();ctx.restore();
+              };
+              sleeve(ls,le,lw);sleeve(rs,re,rw);
             }
           }
 
@@ -275,7 +284,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   }, [isCameraActive, selectedProduct, selectedColor, blendOpacity, showWireframe, landmarks, runtimeLandmarks]);
 
   return (
-    <div className="relative aspect-[3/4] w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between">
+    <div className="relative aspect-video w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between">
       {/* Live Canvas Stage */}
       {isCameraActive ? (
         <>
@@ -286,16 +295,17 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             muted
             onLoadedMetadata={(e) => {
               const v=e.currentTarget;
+              if (canvasRef.current && v.videoWidth && v.videoHeight) { canvasRef.current.width=v.videoWidth; canvasRef.current.height=v.videoHeight; }
               setVideoStatus(`preview ${v.videoWidth}x${v.videoHeight}`);
               console.info('[FitAI] DIRECT_PREVIEW_METADATA',{width:v.videoWidth,height:v.videoHeight,readyState:v.readyState});
             }}
-            className="absolute inset-0 w-full h-full object-cover rounded-3xl -scale-x-100"
+            className="absolute inset-0 w-full h-full object-contain rounded-3xl -scale-x-100 bg-black"
           />
           <canvas
             ref={canvasRef}
-            width={720}
-            height={960}
-            className="absolute inset-0 w-full h-full object-cover rounded-3xl"
+            width={1280}
+            height={720}
+            className="absolute inset-0 w-full h-full object-contain rounded-3xl"
           />
         </>
       ) : (
