@@ -249,7 +249,7 @@ export const AI_MODEL_REGISTRY: AIModelRegistryEntry[] = [
     license: 'Apache-2.0',
     commercialUse: true,
     latencyMs: 14,
-    accuracy: '98.4% mAP',
+    accuracy: 'Runtime: 33 pose landmarks',
     status: 'ACTIVE'
   },
   {
@@ -258,11 +258,11 @@ export const AI_MODEL_REGISTRY: AIModelRegistryEntry[] = [
     task: 'Garment Inpainting & Texture Transfer',
     version: 'v1.2-fp16',
     framework: 'PyTorch / TensorRT Edge',
-    license: 'Apache-2.0',
-    commercialUse: true,
-    latencyMs: 142,
-    accuracy: 'SSIM 0.942',
-    status: 'ACTIVE'
+    license: 'CHECKPOINT LICENSE: VERIFY BEFORE USE',
+    commercialUse: false,
+    latencyMs: 0,
+    accuracy: 'Not benchmarked locally',
+    status: 'BENCHMARK_ONLY'
   },
   {
     id: 'model-facenet',
@@ -273,8 +273,8 @@ export const AI_MODEL_REGISTRY: AIModelRegistryEntry[] = [
     license: 'Apache-2.0',
     commercialUse: true,
     latencyMs: 12,
-    accuracy: '99.2% Top-1',
-    status: 'ACTIVE'
+    accuracy: 'Not implemented',
+    status: 'BENCHMARK_ONLY'
   },
   {
     id: 'model-body-opt',
@@ -285,8 +285,8 @@ export const AI_MODEL_REGISTRY: AIModelRegistryEntry[] = [
     license: 'MIT',
     commercialUse: true,
     latencyMs: 8,
-    accuracy: '100% Boundary Preservation',
-    status: 'ACTIVE'
+    accuracy: 'Prototype only',
+    status: 'STANDBY'
   }
 ];
 
