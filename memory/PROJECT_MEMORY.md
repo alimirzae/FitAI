@@ -44,3 +44,9 @@ The first concrete appearance assets are Classic Shirt v1 and Classic Short Hair
 A critical rendering rule is now fixed: never force webcam frames into a 3:4/720x960 canvas. Canvas dimensions must follow the actual camera videoWidth/videoHeight and preserve natural aspect ratio. This fixed the visibly tall/stretched person in fitting-room mode.
 
 Next appearance milestone is generalized isolated-garment preprocessing + mask contract, occlusion-aware/TPS warp, and semantic hair segmentation. Only after those baselines are stable should heavy generative VTO/hair providers be enabled.
+
+
+## Reference-quality correction — 2026-09-22
+User rejected the old dashboard-heavy UI and the polygon/cartoon appearance overlays. Fitting Room should follow the cleaner approved concept: large central mirror, restrained catalog panel, selected-look panel, less telemetry clutter.
+
+Do not reintroduce flat torso polygons or painted hair as if they were realistic try-on. Garment baseline now uses the real person segmentation mask plus a transparent garment compositor. Hair transformation stays disabled until a real reviewed segmentation/synthesis provider is available. The quality target is photographic, not illustrative.
