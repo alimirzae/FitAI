@@ -1,12 +1,13 @@
-# FitAI - Model License Matrix & Commercial Compliance
+# Model / Runtime License Matrix
 
-In accordance with README Section 2 ("Open-Source First"), all AI models must be validated prior to production inclusion.
+| Component | Purpose | License | Commercial use | Default runtime |
+|---|---|---:|---:|---|
+| OpenCV | image/camera processing | Apache-2.0 | Yes | Yes |
+| OpenCV built-in HOG person detector | person detection baseline | OpenCV distribution | Yes | Yes |
+| OpenCV Haar face cascade | face detection baseline | OpenCV distribution | Yes | Yes |
+| FastAPI | local API | MIT | Yes | Yes |
+| Uvicorn | ASGI server | BSD-3-Clause | Yes | Yes |
+| YuNet (planned) | face detection | MIT | Yes | No |
+| SFace (planned) | face embeddings | Apache-2.0 | Yes | No |
 
-| Model ID | Pipeline Task | Framework | License | Commercial Use | Production Status |
-|---|---|---|---|---|---|
-| **CatVTON TensorRT** | Garment Virtual Try-On | ONNX / CUDA | Apache-2.0 | **Permitted** | **ACTIVE** |
-| **MediaPipe BlazePose** | 33-Pt Pose & Skeleton | TFLite / WebAssembly | Apache-2.0 | **Permitted** | **ACTIVE** |
-| **BiSeNet-V2** | Garment & Body Segmentation | PyTorch / ONNX | MIT | **Permitted** | **ACTIVE** |
-| **InsightFace Lightweight** | Demographic Range & Expression | ONNX Runtime | MIT | **Permitted** | **ACTIVE** |
-| **HairFast-GAN & Colorizer**| Haircut & Dye Synthesis | TensorRT | Apache-2.0 | **Permitted** | **ACTIVE** |
-| **IDM-VTON Diffusion** | Heavy Latent Diffusion VTON | PyTorch Diffusers | CC BY-NC 4.0 | **Non-Commercial** | **BENCHMARK ONLY** |
+Research-only VTON models must not be enabled in production until code, weights and dataset licenses are verified individually.
