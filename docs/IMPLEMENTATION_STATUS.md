@@ -51,3 +51,11 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - Salon keeps before/after comparison, hairstyle selection and color controls. The first actually rendered hairstyle is explicitly marked LOCAL AR.
 - Removed the visible HairFast-GAN / fabricated 96.2% edge-preservation claim from the live Salon status.
 - LIMIT: Classic Shirt v1 and Classic Short Hair v1 are deterministic local AR assets, not diffusion/generative synthesis. General catalog garments still require preprocessing/masks and generalized warp.
+
+
+## Reference UI + compositor correction — 2026-09-22
+- Rebuilt Fitting Room as a calmer three-column reference workspace: catalog, large live mirror, selected-look details. Removed the old fake customer-identification/centimeter-size UI from this production view.
+- Backend now returns the real MediaPipe person segmentation mask as PNG/base64 with analysis results.
+- Live garment rendering uses a transparent garment asset, pose-derived placement, luminance-preserving dye/shading and segmentation-mask occlusion instead of the previous flat torso polygon.
+- The previous painted/cartoon hairstyle overlay has been removed. Salon does not fabricate transformed hair while a real hair segmentation/synthesis provider is absent.
+- Remaining gap to photorealistic reference quality: generalized garment preprocessing + TPS/piecewise deformation and a reviewed generative VTO provider; for Salon, semantic hair segmentation + reviewed hairstyle synthesis.
