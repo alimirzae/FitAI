@@ -60,6 +60,31 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - The previous painted/cartoon hairstyle overlay has been removed. Salon does not fabricate transformed hair while a real hair segmentation/synthesis provider is absent.
 - Remaining gap to photorealistic reference quality: generalized garment preprocessing + TPS/piecewise deformation and a reviewed generative VTO provider; for Salon, semantic hair segmentation + reviewed hairstyle synthesis.
 
+## Photorealistic try-on pipeline — 2026-09-22
+- `backend/vto/` implements the real try-on path end to end: pose -> agnostic
+  mask -> letterbox -> generative engine -> restore -> composite.
+- Two real engines behind one contract. `diffusers-inpaint` (SD inpainting +
+  IP-Adapter garment conditioning) installs from `backend/requirements-vto.txt`
+  and runs in roughly 6 GB VRAM. `external` delegates to a separately installed
+  CatVTON/IDM-VTON checkout via `FITAI_VTO_COMMAND`. No weights are vendored.
+- `/api/v1/render/vto` now runs the pipeline and takes a garment category.
+  `/api/v1/render/providers` and the `photorealistic_vto` health capability are
+  reported from the engine registry, so the UI cannot claim a capability the
+  machine does not have. A failed render returns 503/422; it is never replaced
+  with drawn artwork.
+- New `simple_tryon` screen is the default mode: photo -> garment -> result.
+- `backend/vto/measure.py` adds calibrated metric measurement and size
+  suggestion. Centimetres stay `None` until a known-height calibration is done,
+  per the PROJECT_MEMORY truthfulness rule.
+- 39 tests run in CI on numpy + Pillow only: no GPU, no weights, no camera.
+- NOT VERIFIED ON HARDWARE: no generated image has been produced yet. torch,
+  diffusers, mediapipe, Node and the model weights are not installed on the
+  development machine, and its Python is 3.10 while the backend requires
+  3.11/3.12. The geometry, pipeline wiring and failure paths are tested with a
+  stub engine; the generator itself still needs a first real run.
+- CORRECTION: the development machine's GPU is an RTX 4060 Laptop (8 GB), not
+  the Quadro P1000 4 GB recorded earlier. 8 GB changes what is feasible locally.
+
 ## Runtime resilience hotfix — 2026-09-22
 - Removed per-frame base64 segmentation PNG from the 8 Hz analysis response; pose/face live transport is lightweight again.
 - Serialized access to stateful MediaPipe graphs to prevent concurrent fitting-room/salon inference instability.

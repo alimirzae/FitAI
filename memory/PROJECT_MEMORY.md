@@ -54,5 +54,42 @@ Do not reintroduce flat torso polygons or painted hair as if they were realistic
 ## Live runtime resilience — 2026-09-22
 A frontend-only camera is not sufficient: startup must verify backend health. Do not make garment visibility depend on a single inference request. Keep live pose/face payloads small, serialize MediaPipe Solution access, and use graceful visual fallback. Hair color preview may preserve real camera texture, but it must not be described as hairstyle synthesis.
 
+## Photorealistic try-on implemented — 2026-09-22
+`backend/vto/` is now the real try-on path, replacing scaffolding that only
+shelled out to an unset command. The pipeline is pose -> agnostic mask ->
+letterbox -> engine -> restore -> composite.
+
+Two rules are encoded in the design and must not be relaxed. First, the mask
+decides the quality: it must cover everywhere a looser garment could fall, and
+must never cover face, hair or hands. Second, unmasked pixels are restored
+from the original photograph after generation, because diffusion decoders
+shift colour globally and would otherwise alter the customer's face and skin
+tone.
+
+Engines: `diffusers-inpaint` (SD inpainting + IP-Adapter, permissive licences,
+~6 GB VRAM, installable from `backend/requirements-vto.txt`) and `external`
+(a separately installed CatVTON/IDM-VTON checkout via `FITAI_VTO_COMMAND`).
+No model weights are vendored. When no engine is available the API returns 503
+and the UI says so; artwork is never substituted.
+
+Garment inputs must be isolated product photos. The Unsplash entries in
+`src/data/catalog.ts` are full-person photography and are not usable as
+garment assets; `public/assets/garments/manifest.json` is the try-on catalog.
+
+Metric measurement now exists (`backend/vto/measure.py`) and honours the
+earlier rule: no centimetre value is reported until a known-height calibration
+is performed, and calibration is void if camera, zoom or standing mark change.
+
+STILL UNVERIFIED: no real generated image has been produced. The geometry and
+wiring are covered by 39 CPU-only tests using a stub engine, but the first run
+against actual weights on real GPU hardware has not happened.
+
+## Hardware correction — 2026-09-22
+The development machine's GPU is an NVIDIA RTX 4060 Laptop with 8 GB VRAM, not
+the Quadro P1000 4 GB recorded above. The 4 GB constraint that shaped earlier
+decisions does not apply to this machine. Its Python is 3.10, while the
+backend requires 3.11/3.12 for MediaPipe, so the backend has not been run
+there yet.
+
 ## Photorealistic rendering decision — 2026-09-22
 Canvas/SVG overlays are diagnostic only and must not be presented as VTO. Production uses real model providers via /api/v1/render/vto and /api/v1/render/hair. P1000 runs tracking/reprojection; neural synthesis is keyframe/worker based. Physically accurate cloth requires garment mesh/pattern plus material parameters. Do not bundle NC VTO checkpoints in commercial FitAI.
