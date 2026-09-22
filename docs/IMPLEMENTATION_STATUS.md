@@ -41,3 +41,13 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - Salon uses real MediaPipe Face Mesh. Hair color preview follows upper-face/scalp geometry instead of the old forehead ellipse.
 - Hair preview is NOT semantic hair segmentation and NOT generative hairstyle synthesis.
 - CatVTON/face identity registry entries are no longer shown as active runtime capabilities without implementation/verification.
+
+
+## Complete Look v1 — 2026-09-22
+- Added repository-owned transparent `Classic Shirt v1` asset and a live renderer anchored to real shoulders/hips with articulated sleeves following elbows/wrists.
+- Added repository-owned transparent `Classic Short Hair v1` asset. Salon fits it above the detected face and applies the selected hair color locally.
+- Fixed camera geometry in live fitting room and Salon: render surfaces now use the camera's real videoWidth/videoHeight and 16:9/object-contain presentation instead of forcing 720x960 portrait stretching.
+- Live fitting room includes garment opacity, snapshot and fullscreen controls. Existing product/color/size/catalog controls remain integrated.
+- Salon keeps before/after comparison, hairstyle selection and color controls. The first actually rendered hairstyle is explicitly marked LOCAL AR.
+- Removed the visible HairFast-GAN / fabricated 96.2% edge-preservation claim from the live Salon status.
+- LIMIT: Classic Shirt v1 and Classic Short Hair v1 are deterministic local AR assets, not diffusion/generative synthesis. General catalog garments still require preprocessing/masks and generalized warp.
