@@ -27,7 +27,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
   const [selectedModel, setSelectedModel] = useState<ModelSubject>(MODEL_SUBJECTS[0]); // Sophia
   
   const [config, setConfig] = useState<SalonConfiguration>({
-    hairstyleId: 'style-layered-waves',
+    hairstyleId: 'style-classic-short-v1',
     hairColor: 'Honey Blonde',
     hairColorHex: '#d4af37',
     hairLength: 'medium',
@@ -41,8 +41,13 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const afterOverlayRef = useRef<HTMLCanvasElement>(null);
+  const hairAssetRef = useRef<HTMLImageElement | null>(null);
   const [liveAnalysis,setLiveAnalysis]=useState<LocalPersonAnalysis|null>(null);
   const [liveError,setLiveError]=useState<string|null>(null);
+
+  useEffect(()=>{
+    const img=new Image();img.src='/assets/hair/classic-short-v1.svg';img.onload=()=>{hairAssetRef.current=img;};
+  },[]);
 
   useEffect(()=>{
     if(!isCameraActive || !videoRef.current || !liveVideoRef.current) return;
@@ -64,26 +69,29 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
   },[isCameraActive]);
 
   useEffect(()=>{
-    const a=liveAnalysis;if(!a)return;
-    const draw=(c:HTMLCanvasElement|null,tint:boolean)=>{
+    const analysis=liveAnalysis;if(!analysis)return;
+    const draw=(c:HTMLCanvasElement|null,after:boolean)=>{
       if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
-      const mesh=a.face_mesh?.[0]||[], by=new Map(mesh.map(p=>[p.index,p]));
-      const ids=[234,127,162,21,54,103,67,109,10,338,297,332,284,251,389,356,454];
-      const arc=ids.map(id=>by.get(id)).filter(Boolean) as Array<{x:number;y:number}>;
-      if(arc.length>8){
-        const pts=arc.map(p=>({x:(1-p.x)*c.width,y:p.y*c.height}));
-        const minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),lift=(maxX-minX)*.48;
-        ctx.save();ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const p of pts.slice(1))ctx.lineTo(p.x,p.y);
-        ctx.quadraticCurveTo(maxX,minY-lift,(minX+maxX)/2,minY-lift*1.18);ctx.quadraticCurveTo(minX,minY-lift,pts[0].x,pts[0].y);ctx.closePath();
-        if(tint){ctx.globalAlpha=.48;ctx.fillStyle=config.hairColorHex;ctx.fill();}
-        ctx.globalAlpha=.9;ctx.strokeStyle=tint?'#f472b6':'#22d3ee';ctx.lineWidth=2;ctx.stroke();ctx.restore();
+      const face=analysis.faces?.[0];
+      if(!face)return;
+      const fx=(1-face.x-face.width)*c.width, fy=face.y*c.height, fw=face.width*c.width, fh=face.height*c.height;
+      if(!after){
+        ctx.strokeStyle='#22d3ee';ctx.lineWidth=2;ctx.strokeRect(fx,fy,fw,fh);
+        return;
       }
-      if(!tint)for(const face of a.faces||[]){const x=(1-face.x-face.width)*c.width,y=face.y*c.height,w=face.width*c.width,h=face.height*c.height;ctx.strokeStyle='#f472b6';ctx.lineWidth=2;ctx.strokeRect(x,y,w,h);}
+      // Classic Short Hair v1: isolated transparent local hairstyle fitted to the detected head.
+      const img=hairAssetRef.current;
+      if(img?.complete){
+        const hw=fw*1.62, hh=fh*.82, hx=fx+fw/2-hw/2, hy=fy-fh*.52;
+        ctx.save();ctx.globalAlpha=.96;ctx.drawImage(img,hx,hy,hw,hh);
+        ctx.globalCompositeOperation='source-atop';ctx.globalAlpha=.48;ctx.fillStyle=config.hairColorHex;ctx.fillRect(hx,hy,hw,hh);ctx.restore();
+      }
     };
     draw(overlayRef.current,false);draw(afterOverlayRef.current,true);
-  },[liveAnalysis,config.hairColorHex]);
+  },[liveAnalysis,config.hairColorHex,config.hairstyleId]);
 
   const hairstyles = [
+    { id: 'style-classic-short-v1', nameEn: 'Classic Short v1 (Live)', nameFa: 'کوتاه کلاسیک زنده', length: 'short', category: 'all' },
     { id: 'style-layered-waves', nameEn: 'Layered Beach Waves', nameFa: 'موج‌دار لایه‌ای ساحلی', length: 'medium', category: 'all' },
     { id: 'style-sleek-bob', nameEn: 'Precision French Bob', nameFa: 'باب فرانسوی کلاسیک', length: 'short', category: 'all' },
     { id: 'style-textured-pixie', nameEn: 'Textured Modern Pixie', nameFa: 'پیکسی مدرن و کوتاه', length: 'short', category: 'women' },
@@ -187,8 +195,8 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
                   {t.salon.natural}
                 </span>
               </div>
-              <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
-                {isCameraActive ? <><video ref={liveVideoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover -scale-x-100"/><canvas ref={overlayRef} width={720} height={960} className="absolute inset-0 w-full h-full object-cover"/></> :
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+                {isCameraActive ? <><video ref={liveVideoRef} autoPlay playsInline muted onLoadedMetadata={(e)=>{const v=e.currentTarget;if(v.videoWidth&&v.videoHeight){if(overlayRef.current){overlayRef.current.width=v.videoWidth;overlayRef.current.height=v.videoHeight;}if(afterOverlayRef.current){afterOverlayRef.current.width=v.videoWidth;afterOverlayRef.current.height=v.videoHeight;}}}} className="absolute inset-0 w-full h-full object-contain -scale-x-100 bg-black"/><canvas ref={overlayRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-contain"/></> :
                 <img src={selectedModel.imageUrl} alt="Original Portrait" className="w-full h-full object-cover" />}
               </div>
             </div>
@@ -206,8 +214,8 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
                     : config.hairColor}
                 </span>
               </div>
-              <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group">
-                {isCameraActive ? <><video autoPlay playsInline muted ref={(el)=>{if(el&&videoRef.current?.srcObject&&el.srcObject!==videoRef.current.srcObject){el.srcObject=videoRef.current.srcObject;el.play().catch(()=>{});}}} className="absolute inset-0 w-full h-full object-cover -scale-x-100"/><canvas ref={afterOverlayRef} width={720} height={960} className="absolute inset-0 w-full h-full object-cover"/></> :
+              <div className="relative aspect-video w-full rounded-xl overflow-hidden border border-slate-800 bg-slate-950 group">
+                {isCameraActive ? <><video autoPlay playsInline muted ref={(el)=>{if(el&&videoRef.current?.srcObject&&el.srcObject!==videoRef.current.srcObject){el.srcObject=videoRef.current.srcObject;el.play().catch(()=>{});}}} className="absolute inset-0 w-full h-full object-contain -scale-x-100 bg-black"/><canvas ref={afterOverlayRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-contain"/></> :
                 <img src={selectedModel.imageUrl} alt="Virtual Salon Look" className="w-full h-full object-cover" style={{filter:'hue-rotate(15deg) saturate(1.1)'}} />}
 
                 {/* Hair Tint Color Filter Overlay */}
@@ -281,7 +289,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
             </div>
 
             <span className="text-[11px] text-slate-400 font-mono">
-              HairFast-GAN • 96.2% Edge Preservation
+              MediaPipe Face + Classic Short Hair v1 • LOCAL AR
             </span>
           </div>
         </div>
