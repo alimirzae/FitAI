@@ -139,27 +139,65 @@ def pick_source(requested: str) -> str:
 # commands
 # --------------------------------------------------------------------------- #
 
-def download_file(source: str, repo: str, remote: str, target: Path) -> int:
+def download_file(source: str, repo: str, remote: str, target: Path,
+                  attempts: int = 8) -> int:
+    """Download one file, resuming a partial transfer where the server allows.
+
+    These are multi-gigabyte files and the networks that need a mirror in the
+    first place tend to drop long transfers. Restarting from zero each time can
+    mean a download never finishes, so progress is kept in a .part file and
+    continued with a Range request.
+    """
     target.parent.mkdir(parents=True, exist_ok=True)
     part = target.with_suffix(target.suffix + ".part")
+    url = url_for(source, repo, remote)
+    last_error = None
 
-    with SESSION.get(url_for(source, repo, remote), timeout=60, stream=True) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("Content-Length") or 0)
-        written = 0
-        last = time.perf_counter()
-        with open(part, "wb") as fh:
-            for chunk in r.iter_content(1 << 20):
-                fh.write(chunk)
-                written += len(chunk)
-                now = time.perf_counter()
-                if total > (8 << 20) and now - last > 5:
-                    pct = 100 * written / total if total else 0
-                    print(f"        {written/1024**2:8.0f} / {total/1024**2:.0f} MB "
-                          f"({pct:4.1f}%)", flush=True)
-                    last = now
-    part.replace(target)
-    return written
+    for attempt in range(1, attempts + 1):
+        have = part.stat().st_size if part.exists() else 0
+        headers = {"Range": f"bytes={have}-"} if have else {}
+
+        try:
+            with SESSION.get(url, timeout=60, stream=True, headers=headers) as r:
+                if have and r.status_code == 200:
+                    # Server ignored the range; the body restarts from zero.
+                    have = 0
+                elif have and r.status_code != 206:
+                    r.raise_for_status()
+                elif not have:
+                    r.raise_for_status()
+
+                remaining = int(r.headers.get("Content-Length") or 0)
+                total = have + remaining
+                written = have
+                last = time.perf_counter()
+
+                with open(part, "ab" if have else "wb") as fh:
+                    for chunk in r.iter_content(1 << 20):
+                        fh.write(chunk)
+                        written += len(chunk)
+                        now = time.perf_counter()
+                        if total > (8 << 20) and now - last > 10:
+                            pct = 100 * written / total if total else 0
+                            print(f"        {written/1024**2:8.0f} / {total/1024**2:.0f} MB "
+                                  f"({pct:4.1f}%)", flush=True)
+                            last = now
+
+            if total and written < total:
+                raise IOError(f"truncated at {written} of {total} bytes")
+
+            part.replace(target)
+            return written
+
+        except Exception as exc:
+            last_error = exc
+            done = part.stat().st_size if part.exists() else 0
+            if attempt < attempts:
+                print(f"        retry {attempt}/{attempts - 1} from "
+                      f"{done/1024**2:.0f} MB: {type(exc).__name__}", flush=True)
+                time.sleep(min(2 * attempt, 15))
+
+    raise last_error if last_error else IOError("download failed")
 
 
 def download(source: str, dest: Path) -> int:
