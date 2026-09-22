@@ -1,13 +1,14 @@
 # Model / Runtime License Matrix
 
-| Component | Purpose | License | Commercial use | Default runtime |
-|---|---|---:|---:|---|
-| OpenCV | image/camera processing | Apache-2.0 | Yes | Yes |
-| OpenCV built-in HOG person detector | person detection baseline | OpenCV distribution | Yes | Yes |
-| OpenCV Haar face cascade | face detection baseline | OpenCV distribution | Yes | Yes |
-| FastAPI | local API | MIT | Yes | Yes |
-| Uvicorn | ASGI server | BSD-3-Clause | Yes | Yes |
-| YuNet (planned) | face detection | MIT | Yes | No |
-| SFace (planned) | face embeddings | Apache-2.0 | Yes | No |
+| Component | Purpose | License | Commercial default |
+|---|---|---|---|
+| OpenCV | image/camera processing | Apache-2.0 | Yes |
+| MediaPipe | pose/segmentation/face geometry | Apache-2.0 framework | Yes, subject to bundled asset audit |
+| FastAPI | local API | MIT | Yes |
+| CatVTON code/checkpoints | diffusion VTO | CC BY-NC-SA 4.0 | **No** |
+| IDM-VTON code/checkpoints | diffusion VTO | CC BY-NC-SA 4.0 | **No** |
+| StableVITON | diffusion VTO | CC BY-NC-SA 4.0 | **No** |
+| HairFastGAN repository code | hairstyle transfer | MIT | Conditional: audit every pretrained dependency/weight |
+| FitAI external provider adapter | model integration | project license | Yes |
 
-Research-only VTON models must not be enabled in production until code, weights and dataset licenses are verified individually.
+Source-code and pretrained-weight licenses are separate gates. A provider cannot be enabled in a commercial release until code, checkpoint, training-data/derivative constraints and redistribution terms are reviewed.
