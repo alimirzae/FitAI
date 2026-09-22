@@ -11,3 +11,5 @@ dist-ssr
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+backend/vto/weights/

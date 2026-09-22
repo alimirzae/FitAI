@@ -35,6 +35,10 @@ EAR_L, EAR_R = 7, 8
 SHOULDER_L, SHOULDER_R = 11, 12
 ELBOW_L, ELBOW_R = 13, 14
 WRIST_L, WRIST_R = 15, 16
+# Pose gives three points per hand (pinky, index, thumb) beyond the wrist.
+# They are what marks out the fingers, which the mask has to spare.
+HAND_L = (17, 19, 21)
+HAND_R = (18, 20, 22)
 HIP_L, HIP_R = 23, 24
 KNEE_L, KNEE_R = 25, 26
 ANKLE_L, ANKLE_R = 27, 28
@@ -230,12 +234,37 @@ def build_agnostic_mask(
     head_c = _lerp(nose, neck, -0.10)
     keep_draw.ellipse([head_c[0] - head_r, head_c[1] - head_r * 1.25,
                        head_c[0] + head_r, head_c[1] + head_r * chin_t], fill=255)
-    for wr in (WRIST_L, WRIST_R):
-        if lm[wr].visibility < 0.3:
+    # A disc on the wrist alone is not enough: the hand extends past the wrist,
+    # away from the elbow, so the fingers fall outside it. Diffusion models
+    # reconstruct hands badly, and a hand resting on the hip sits exactly where
+    # an upper-body mask lives, so the fingers must be covered explicitly.
+    for wrist, elbow, finger_ids in ((WRIST_L, ELBOW_L, HAND_L), (WRIST_R, ELBOW_R, HAND_R)):
+        if lm[wrist].visibility < 0.3:
             continue
-        p = P(wr)
-        r = arm_r * 0.95
-        keep_draw.ellipse([p[0] - r, p[1] - r, p[0] + r, p[1] + r], fill=255)
+
+        wrist_pt = P(wrist)
+        centres = [wrist_pt]
+        radius = arm_r * 1.1
+
+        fingers = [P(i) for i in finger_ids if lm[i].visibility >= 0.2]
+        if fingers:
+            cx = sum(p[0] for p in fingers) / len(fingers)
+            cy = sum(p[1] for p in fingers) / len(fingers)
+            centres.append((cx, cy))
+            spread = max(_dist((cx, cy), p) for p in fingers)
+            radius = max(radius, spread * 1.6)
+
+        # Continue past the wrist along the forearm, so a hand whose finger
+        # landmarks are weak is still covered to roughly its full length.
+        dx, dy = wrist_pt[0] - P(elbow)[0], wrist_pt[1] - P(elbow)[1]
+        length = math.hypot(dx, dy)
+        if length > 1:
+            reach = arm_r * 1.25
+            centres.append((wrist_pt[0] + dx / length * reach,
+                            wrist_pt[1] + dy / length * reach))
+
+        for cx, cy in centres:
+            keep_draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=255)
 
     mask_arr = np.asarray(mask, dtype=np.int16) - np.asarray(keep, dtype=np.int16)
     mask = Image.fromarray(np.clip(mask_arr, 0, 255).astype(np.uint8))

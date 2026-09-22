@@ -11,11 +11,18 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from backend.tests.fixtures import FRAME, partial_pose, standing_pose
+from backend.tests.fixtures import (
+    FRAME,
+    hands_on_hips_pose,
+    partial_pose,
+    standing_pose,
+)
 from backend.vto.preprocess import (
     ANKLE_L,
     EAR_L,
     ELBOW_L,
+    HAND_L,
+    HAND_R,
     HIP_L,
     HIP_R,
     KNEE_L,
@@ -24,6 +31,7 @@ from backend.vto.preprocess import (
     SHOULDER_L,
     SHOULDER_R,
     WRIST_L,
+    WRIST_R,
     Landmark,
     build_agnostic_mask,
     composite_result,
@@ -90,10 +98,23 @@ def test_face_is_never_repainted():
         assert not covered(mask, pose[NOSE]), f"{category} mask must preserve the face"
 
 
-def test_hands_are_never_repainted():
-    pose = standing_pose()
-    mask = build_agnostic_mask(FRAME, pose, "upper")
-    assert not covered(mask, pose[WRIST_L])
+@pytest.mark.parametrize("category", ("upper", "lower", "overall"))
+@pytest.mark.parametrize("pose_name", ("arms down", "hands on hips"))
+def test_hands_are_never_repainted(category, pose_name):
+    """Every point of both hands must survive, in any pose.
+
+    Checking the wrist of a pose whose arms hang clear of the body proves
+    nothing: the fingers reach past the wrist, and when the hands rest on the
+    waist they sit inside the torso region. Diffusion reconstructs hands badly,
+    so a covered hand is a visibly broken result.
+    """
+    pose = standing_pose() if pose_name == "arms down" else hands_on_hips_pose()
+    mask = build_agnostic_mask(FRAME, pose, category)
+
+    for index in (WRIST_L, WRIST_R, *HAND_L, *HAND_R):
+        assert not covered(mask, pose[index]), (
+            f"{category} mask repaints landmark {index} with {pose_name}"
+        )
 
 
 # --------------------------------------------------------------------------- #

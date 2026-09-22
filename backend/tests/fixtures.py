@@ -49,6 +49,25 @@ def standing_pose(yaw: float = 0.0, visibility: float = 0.97) -> list[Landmark]:
     ]
 
 
+# Arms akimbo. In the reference pose the arms hang clear of the body, so a
+# mask that covers the hands looks fine there; put the hands on the waist and
+# they land inside the torso region, which is what actually happens in shop
+# photographs. Diffusion models mangle hands, so this is the pose that matters.
+_HANDS_ON_HIPS = {
+    13: (0.240, 0.360), 14: (0.760, 0.360),               # elbows swung out
+    15: (0.360, 0.470), 16: (0.640, 0.470),               # wrists at the waist
+    17: (0.378, 0.487), 18: (0.622, 0.487),               # pinky
+    19: (0.385, 0.482), 20: (0.615, 0.482),               # index
+    21: (0.372, 0.470), 22: (0.628, 0.470),               # thumb
+}
+
+
+def hands_on_hips_pose(visibility: float = 0.9) -> list[Landmark]:
+    """Reference pose with both hands resting on the waist."""
+    points = {**_REFERENCE, **_HANDS_ON_HIPS}
+    return [Landmark(points[i][0], points[i][1], visibility) for i in range(33)]
+
+
 def partial_pose(hidden: set[int], yaw: float = 0.0) -> list[Landmark]:
     """Reference pose with some joints marked as not visible, e.g. a customer
     standing too close so their legs are out of frame."""
