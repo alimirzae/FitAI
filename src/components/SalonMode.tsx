@@ -73,11 +73,19 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
     const draw=(c:HTMLCanvasElement|null,after:boolean)=>{
       if(!c)return;const ctx=c.getContext('2d');if(!ctx)return;ctx.clearRect(0,0,c.width,c.height);
       const face=analysis.faces?.[0];if(!face)return;
-      // Keep live analysis truthful. A real hairstyle provider will render into the AFTER layer.
-      // Until then we only show a subtle face guide in BEFORE; no painted/cartoon hair is fabricated.
+      const x=(1-face.x-face.width)*c.width,y=face.y*c.height,w=face.width*c.width,h=face.height*c.height;
       if(!after){
-        const x=(1-face.x-face.width)*c.width,y=face.y*c.height,w=face.width*c.width,h=face.height*c.height;
-        ctx.save();ctx.strokeStyle='rgba(34,211,238,.42)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.strokeRect(x,y,w,h);ctx.restore();
+        ctx.save();ctx.strokeStyle='rgba(34,211,238,.34)';ctx.lineWidth=1.5;ctx.setLineDash([5,6]);ctx.strokeRect(x,y,w,h);ctx.restore();
+      } else {
+        // Real-texture hair recolor preview: tint only the probable hair zone while keeping
+        // the live camera texture underneath. This is deliberately NOT labelled hairstyle synthesis.
+        const hx=x-w*.14, hy=y-h*.34, hw=w*1.28, hh=h*.58;
+        ctx.save();
+        ctx.beginPath();ctx.ellipse(hx+hw/2,hy+hh*.58,hw*.48,hh*.48,0,Math.PI,Math.PI*2);ctx.clip();
+        ctx.globalCompositeOperation='color';ctx.globalAlpha=.52;ctx.fillStyle=config.hairColorHex;ctx.fillRect(hx,hy,hw,hh);
+        ctx.globalCompositeOperation='soft-light';ctx.globalAlpha=.24;
+        const g=ctx.createLinearGradient(hx,hy,hx,hy+hh);g.addColorStop(0,'rgba(255,255,255,.45)');g.addColorStop(1,'rgba(0,0,0,.35)');ctx.fillStyle=g;ctx.fillRect(hx,hy,hw,hh);
+        ctx.restore();
       }
     };
     draw(overlayRef.current,false);draw(afterOverlayRef.current,true);
@@ -218,7 +226,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-xs font-bold text-white">
-                        {lang === 'fa' ? 'پیش‌نمایش واقعی پس از نصب مدل مولد مو' : 'Real preview requires a hairstyle synthesis provider'}
+                        {lang === 'fa' ? 'پیش‌نمایش زنده رنگ مو با حفظ بافت واقعی' : 'Live hair-color preview preserving real texture'}
                       </div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                         <span 
@@ -280,7 +288,7 @@ export const SalonMode: React.FC<SalonModeProps> = ({ onLogEvent, lang, videoRef
             </div>
 
             <span className="text-[11px] text-slate-400 font-mono">
-              MediaPipe Face Mesh • HAIRSTYLE PROVIDER NOT INSTALLED
+              MediaPipe Face Mesh • LIVE HAIR COLOR • STYLE SYNTHESIS PENDING
             </span>
           </div>
         </div>
