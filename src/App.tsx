@@ -54,6 +54,7 @@ export function App() {
       // Mark the camera active as soon as the browser gives us a live track.
       // Waiting for metadata before mounting the live view created a deadlock-like UX
       // on some Windows/Chrome webcam drivers.
+      setCurrentMode('fitting_room');
       setIsCameraActive(true);
       logEvent('CAMERA_STREAM_ACQUIRED',{tracks:stream.getVideoTracks().map(t=>({label:t.label,state:t.readyState,settings:t.getSettings()}))});
       try { await video.play(); } catch (playError) { console.warn('[FitAI] VIDEO_PLAY_DEFERRED',playError); }

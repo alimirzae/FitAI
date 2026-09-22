@@ -25,6 +25,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
 }) => {
   const t = TRANSLATIONS[lang];
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewRef = useRef<HTMLVideoElement>(null);
   const garmentImgRef = useRef<HTMLImageElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
 
@@ -39,6 +40,23 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   const [videoStatus, setVideoStatus] = useState<string>('idle');
   const requestCount = useRef(0);
 
+  // Attach the already-acquired MediaStream to a visible video element.
+  // This gives a direct camera preview independent of Canvas/AI processing.
+  useEffect(() => {
+    const source = videoRef.current;
+    const preview = previewRef.current;
+    if (!isCameraActive || !source || !preview) return;
+    const stream = source.srcObject as MediaStream | null;
+    if (!stream) { setVideoStatus('no-stream'); return; }
+    if (preview.srcObject !== stream) preview.srcObject = stream;
+    preview.play()
+      .then(() => {
+        setVideoStatus(`preview ${preview.videoWidth || '?'}x${preview.videoHeight || '?'}`);
+        console.info('[FitAI] DIRECT_PREVIEW_PLAYING', { width: preview.videoWidth, height: preview.videoHeight });
+      })
+      .catch((e) => { setVideoStatus('preview-play-error'); setAiError(e?.message || String(e)); console.error('[FitAI] DIRECT_PREVIEW_FAILED', e); });
+  }, [isCameraActive, videoRef]);
+
   // Real local inference loop. Rendering remains 60 FPS while inference is throttled
   // for CPU-friendly operation on the target P1000 workstation.
   useEffect(() => {
@@ -46,7 +64,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     let cancelled = false;
     let busy = false;
     const timer = window.setInterval(async () => {
-      const video = videoRef.current;
+      const video = previewRef.current || videoRef.current;
       if (!video) { setVideoStatus('missing-video'); return; }
       if (video.readyState < 2 || !video.videoWidth) {
         setVideoStatus(`waiting rs=${video.readyState} ${video.videoWidth}x${video.videoHeight}`);
@@ -92,7 +110,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     const renderLoop = (now: number) => {
       const startTime = performance.now();
       const canvas = canvasRef.current;
-      const video = videoRef.current;
+      const video = previewRef.current || videoRef.current;
 
       if (canvas && video && isCameraActive && video.readyState >= 2) {
         const ctx = canvas.getContext('2d');
@@ -229,12 +247,26 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
     <div className="relative aspect-[3/4] w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between">
       {/* Live Canvas Stage */}
       {isCameraActive ? (
-        <canvas
-          ref={canvasRef}
-          width={720}
-          height={960}
-          className="w-full h-full object-cover rounded-3xl"
-        />
+        <>
+          <video
+            ref={previewRef}
+            autoPlay
+            playsInline
+            muted
+            onLoadedMetadata={(e) => {
+              const v=e.currentTarget;
+              setVideoStatus(`preview ${v.videoWidth}x${v.videoHeight}`);
+              console.info('[FitAI] DIRECT_PREVIEW_METADATA',{width:v.videoWidth,height:v.videoHeight,readyState:v.readyState});
+            }}
+            className="absolute inset-0 w-full h-full object-cover rounded-3xl -scale-x-100"
+          />
+          <canvas
+            ref={canvasRef}
+            width={720}
+            height={960}
+            className="absolute inset-0 w-full h-full object-cover rounded-3xl"
+          />
+        </>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">

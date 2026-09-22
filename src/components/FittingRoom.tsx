@@ -131,6 +131,12 @@ export const FittingRoom: React.FC<FittingRoomProps> = ({
     }
   }, [selectedModel]);
 
+  // If the global camera button is enabled while the fitting room is open,
+  // automatically show the live camera stage instead of leaving the user in Studio mode.
+  useEffect(() => {
+    if (isCameraActive) setTryOnDisplayMode('live_camera');
+  }, [isCameraActive]);
+
   // Viewing time ticker
   useEffect(() => {
     const timer = setInterval(() => {
