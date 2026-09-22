@@ -74,10 +74,36 @@ REPOS = {
     "modelscope": {
         "stable-diffusion-inpainting": "AI-ModelScope/stable-diffusion-inpainting",
         "IP-Adapter": "AI-ModelScope/IP-Adapter",
+        "CatVTON": "shiertier/CatVTON",
     },
 }
+REPOS["huggingface"]["CatVTON"] = "zhengchong/CatVTON"
 
 PLAN = [("stable-diffusion-inpainting", SD_FILES), ("IP-Adapter", IPA_FILES)]
+
+# CatVTON drives the external engine. It needs no text encoder at all - it
+# skips cross-attention entirely - so only its trained self-attention weights
+# and the better VAE are new; the UNet and scheduler are the same Stable
+# Diffusion inpainting files already fetched above. SCHP and DensePose are
+# deliberately omitted: those exist to produce a mask, and FitAI supplies its
+# own from backend/vto/preprocess.py.
+# CatVTON resolves its attention weights as <attn_ckpt>/<version>/attention,
+# so the version directory has to survive into the local layout.
+CATVTON_FILES = [
+    ("mix-48k-1024/attention/model.safetensors",
+     "mix-48k-1024/attention/model.safetensors"),
+    ("sd-vae-ft-mse/config.json", "sd-vae-ft-mse/config.json"),
+    ("sd-vae-ft-mse/diffusion_pytorch_model.safetensors",
+     "sd-vae-ft-mse/diffusion_pytorch_model.safetensors"),
+]
+
+CATVTON_PLAN = [("CatVTON", CATVTON_FILES)]
+
+MODELS = {
+    "base": PLAN,
+    "catvton": CATVTON_PLAN,
+    "all": PLAN + CATVTON_PLAN,
+}
 
 SESSION = requests.Session()
 SESSION.headers["User-Agent"] = "Mozilla/5.0 (FitAI weight fetcher)"
@@ -200,12 +226,12 @@ def download_file(source: str, repo: str, remote: str, target: Path,
     raise last_error if last_error else IOError("download failed")
 
 
-def download(source: str, dest: Path) -> int:
+def download(source: str, dest: Path, plan) -> int:
     source = pick_source(source)
     print(f"destination: {dest}\n", flush=True)
 
     failed = []
-    for model_dir, files in PLAN:
+    for model_dir, files in plan:
         repo = REPOS[source][model_dir]
         print(f"{model_dir}  <-  {source}:{repo}", flush=True)
         for remote, local in files:
@@ -235,10 +261,10 @@ def download(source: str, dest: Path) -> int:
     return 0
 
 
-def check(dest: Path) -> int:
+def check(dest: Path, plan) -> int:
     print(f"destination: {dest}\n")
     missing = total = 0
-    for model_dir, files in PLAN:
+    for model_dir, files in plan:
         print(f"{model_dir}")
         for _, local in files:
             target = dest / model_dir / local
@@ -282,6 +308,10 @@ def main(argv: list[str] | None = None) -> int:
                         default="auto", help="where to download from (default: probe both)")
     parser.add_argument("--dest", type=Path, default=DEFAULT_DEST,
                         help=f"destination directory (default: {DEFAULT_DEST})")
+    parser.add_argument("--model", choices=sorted(MODELS), default="base",
+                        help="base: the diffusers engine. catvton: the external "
+                             "engine's weights (CC BY-NC-SA, non-commercial). "
+                             "all: both.")
     parser.add_argument("--check", action="store_true", help="report what is already on disk")
     parser.add_argument("--diagnose", action="store_true",
                         help="probe each source for real weight bytes")
@@ -289,14 +319,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.diagnose:
         return diagnose()
+    plan = MODELS[args.model]
     if args.check:
-        return check(args.dest)
+        return check(args.dest, plan)
 
     free = shutil.disk_usage(args.dest.parent if args.dest.exists() else REPO_ROOT).free
     if free < 6 * 1024 ** 3:
         print(f"warning: only {free/1024**3:.1f} GB free; about 4.6 GB is needed\n",
               file=sys.stderr)
-    return download(args.source, args.dest)
+    if args.model in ("catvton", "all"):
+        print("NOTE: CatVTON weights are CC BY-NC-SA 4.0 - non-commercial use only.")
+        print("      See docs/licenses/MODEL_LICENSE_MATRIX.md before shipping.\n")
+    return download(args.source, args.dest, plan)
 
 
 if __name__ == "__main__":

@@ -103,6 +103,41 @@ the synthetic reference pose:
   silhouette is now unioned in, with pose deciding only which part of it the
   category owns.
 
+## CatVTON wired up, and what it showed about garment photography — 2026-09-22
+
+RUNNABLE: the `external` engine now drives CatVTON through
+`backend/vto/adapters/catvton_adapter.py`. ~31 s per image at 576x768 / 40
+steps on an RTX 4060. CatVTON needs no text encoder and accepts a supplied
+mask, so FitAI's own mask is used and CatVTON's DensePose + SCHP mask stack
+(750 MB) is neither downloaded nor required. Its code and checkpoints stay
+outside the repository; the adapter refuses to run unless CATVTON_ROOT points
+at an operator-installed checkout.
+
+THE FINDING THAT MATTERS MOST. Garment photography, not the model, decides
+whether try-on works. Same person, same mask, same engine, only the garment
+input changed:
+
+- A leather jacket folded diagonally on a crumpled sheet - the kind of photo a
+  shop actually has lying around - produced a mangled leather crop top on
+  every seed, on both engines.
+- Standard in-shop product shots (garment upright, front-facing, flat, plain
+  background) transferred correctly: a cardigan kept its green placket,
+  buttons and full-length sleeves; a sleeveless knit vest kept its cut and a
+  legible printed graphic; a sports jersey kept its shoulder stripes and
+  number.
+
+So `src/data/catalog.ts` cannot feed this pipeline, and neither can casual
+flat-lays. The asset requirement is an in-shop product photograph per SKU.
+
+KNOWN ARTIFACT: CatVTON stretches the garment to fill the whole masked
+region, so where the `upper` mask extends below the garment's real hem the
+fabric is stretched into a band across the skirt. The mask is currently tuned
+generously for the diffusers engine, which needs the room. Tightening it per
+engine is not done yet.
+
+Also fixed here: the external engine could not launch a quoted command on
+Windows, which made it unusable on the target platform.
+
 ## Generation verified — 2026-09-22
 RTX 4060 Laptop 8 GB, weights mirrored from ModelScope, fully offline.
 
