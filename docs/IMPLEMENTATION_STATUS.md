@@ -59,3 +59,10 @@ Do not move an item to runnable/completed until it has real code, clean-clone in
 - Live garment rendering uses a transparent garment asset, pose-derived placement, luminance-preserving dye/shading and segmentation-mask occlusion instead of the previous flat torso polygon.
 - The previous painted/cartoon hairstyle overlay has been removed. Salon does not fabricate transformed hair while a real hair segmentation/synthesis provider is absent.
 - Remaining gap to photorealistic reference quality: generalized garment preprocessing + TPS/piecewise deformation and a reviewed generative VTO provider; for Salon, semantic hair segmentation + reviewed hairstyle synthesis.
+
+## Runtime resilience hotfix — 2026-09-22
+- Removed per-frame base64 segmentation PNG from the 8 Hz analysis response; pose/face live transport is lightweight again.
+- Serialized access to stateful MediaPipe graphs to prevent concurrent fitting-room/salon inference instability.
+- Garment compositor now has a visible fallback placement and no longer disappears just because one AI request fails. Real pose tracking replaces fallback automatically when available.
+- Salon now renders a live hair-color preview over the real camera texture. This is hair recoloring, not hairstyle synthesis; hairstyle generation remains pending a reviewed model/provider.
+- Windows launcher now refuses to start the frontend until /api/v1/health confirms the backend is actually online.
