@@ -30,3 +30,9 @@ Current development must continue with the laptop/standard RGB webcam. The user 
 Architecture must evolve toward an ICameraProvider / UnifiedFrame abstraction. Unified frames may contain RGB plus optional depth, calibration/intrinsics and hardware body data. AI/person/try-on modules must never depend directly on Kinect SDK classes. This allows future RGB-D cameras to be added as providers.
 
 Planned Kinect/RGB-D uses include person distance, depth-assisted segmentation, calibration, improved body geometry/metric measurement research and optional skeleton fusion. RGB webcam mode must always remain supported.
+
+
+## Appearance step 2 decision — 2026-09-22
+Keep the immediate low-resource path deterministic: real MediaPipe pose drives articulated torso/sleeve AR. Never treat full-person catalog photography as a garment texture. Next implement an isolated transparent garment/mask contract and piecewise affine/TPS warping, then optional generative VTO.
+
+Salon uses real Face Mesh geometry for a scalp-guided preview. This is not semantic hair segmentation; a reviewed hair-mask provider is required before claiming pixel-level hair detection. Generative hairstyle transfer remains a separate optional provider.
