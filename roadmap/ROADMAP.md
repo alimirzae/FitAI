@@ -14,12 +14,15 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - DONE normalized shoulder/hip/body geometry
 - DONE CPU fallback suitable for 16 GB RAM / Quadro P1000 4 GB
 - DONE pose-aware articulated AR garment baseline (real shoulder/hip/elbow/wrist tracking)
-- TODO transparent isolated garment assets + alpha masks
-- TODO piecewise affine/TPS garment warp
+- DONE first isolated transparent garment asset: Classic Shirt v1
+- TODO generalized garment asset contract + alpha masks for catalog import
+- PROTOTYPE pose-anchored torso fit + articulated sleeves for Classic Shirt v1
+- TODO generalized piecewise affine/TPS garment warp
 - PROTOTYPE body slim/fit visualization
 - DONE live Salon camera + face detection + Face Mesh geometry
-- PROTOTYPE Face-Mesh-guided scalp/hair-region color preview
-- TODO semantic pixel-level hair segmentation
+- DONE first local hairstyle asset: Classic Short Hair v1 fitted from real face detection/Face Mesh geometry
+- PROTOTYPE hairstyle color tint and live alignment
+- TODO semantic pixel-level hair segmentation for precise occlusion/boundaries
 - TODO production hairstyle synthesis
 - TODO metric anthropometry in centimeters
 - TODO face identity/returning-customer recognition
@@ -62,8 +65,10 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 
 ## Phase 4 — Virtual try-on
 - DONE articulated 2D pose-aware AR baseline
-- TODO garment asset contract: isolated transparent garment + mask
-- TODO piecewise affine/TPS warp before heavy generative VTO
+- DONE local isolated Classic Shirt v1 asset and live renderer
+- TODO generalized garment asset contract: isolated transparent garment + mask
+- PROTOTYPE pose-anchored shirt fit with articulated sleeves
+- TODO generalized piecewise affine/TPS warp before heavy generative VTO
 - TODO evaluate commercially usable checkpoints independently from source-code licenses
 - TODO garment segmentation/preprocessing
 - TODO asynchronous try-on job API
