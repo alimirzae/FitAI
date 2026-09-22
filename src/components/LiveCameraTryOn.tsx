@@ -27,12 +27,13 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLVideoElement>(null);
   const garmentImgRef = useRef<HTMLImageElement | null>(null);
+  const personMaskRef = useRef<HTMLImageElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
 
   const [fps, setFps] = useState<number>(30);
   const [cpuLatencyMs, setCpuLatencyMs] = useState<number>(16);
   const [blendOpacity, setBlendOpacity] = useState<number>(0.92);
-  const [showWireframe, setShowWireframe] = useState<boolean>(true);
+  const [showWireframe, setShowWireframe] = useState<boolean>(false);
   const [runtimeLandmarks, setRuntimeLandmarks] = useState<PoseLandmark[]>([]);
   const [aiOnline, setAiOnline] = useState<boolean>(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -79,6 +80,7 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
         const result = await analyzeVideoFrame(video);
         if (!cancelled) {
           setRuntimeLandmarks(result.landmarks || []);
+          if(result.segmentation?.mask_png_base64){const mask=new Image();mask.src=`data:image/png;base64,${result.segmentation.mask_png_base64}`;mask.onload=()=>{personMaskRef.current=mask;};}
           setAiOnline(true);
           setAiError(null);
           setAiLatency(result.latency_ms);
@@ -151,33 +153,32 @@ export const LiveCameraTryOn: React.FC<LiveCameraTryOnProps> = ({
             ctx.restore();
           }
 
-          // 4. Classic Shirt v1 — local transparent garment asset + articulated sleeves.
-          if (runtimeLandmarks.length) {
+          // 4. Garment compositor: transparent garment asset, pose fit, cloth shading and person-mask occlusion.
+          if (runtimeLandmarks.length && garmentImgRef.current?.complete) {
             const byName=new Map(runtimeLandmarks.map(p=>[p.name,p]));
             const pt=(name:string)=>{const p=byName.get(name);return p?{x:(1-p.x)*width,y:p.y*height}:null};
             const ls=pt('left_shoulder'),rs=pt('right_shoulder'),lh=pt('left_hip'),rh=pt('right_hip');
-            const le=pt('left_elbow'),re=pt('right_elbow'),lw=pt('left_wrist'),rw=pt('right_wrist');
             if(ls&&rs&&lh&&rh){
-              const topY=Math.min(ls.y,rs.y)-Math.abs(ls.x-rs.x)*.035;
-              const bottomY=Math.max(lh.y,rh.y)+Math.abs(ls.x-rs.x)*.035;
-              const leftX=Math.min(ls.x,lh.x)-Math.abs(ls.x-rs.x)*.08;
-              const rightX=Math.max(rs.x,rh.x)+Math.abs(ls.x-rs.x)*.08;
-              const color=selectedColor?.hex||selectedProduct.colorHex||'#dbeafe';
-              // Torso uses an actual transparent local garment asset.
-              if(garmentImgRef.current?.complete){
-                ctx.save();ctx.globalAlpha=blendOpacity;
-                ctx.drawImage(garmentImgRef.current,leftX,topY,rightX-leftX,bottomY-topY);
-                ctx.globalCompositeOperation='multiply';ctx.globalAlpha=.22;ctx.fillStyle=color;ctx.fillRect(leftX,topY,rightX-leftX,bottomY-topY);ctx.restore();
+              const shoulderW=Math.abs(rs.x-ls.x), torsoH=Math.abs(((lh.y+rh.y)/2)-((ls.y+rs.y)/2));
+              const cx=(ls.x+rs.x+lh.x+rh.x)/4;
+              const gx=cx-shoulderW*.72, gy=Math.min(ls.y,rs.y)-torsoH*.08, gw=shoulderW*1.44, gh=torsoH*1.18;
+              ctx.save();
+              ctx.globalAlpha=blendOpacity;
+              ctx.drawImage(garmentImgRef.current,gx,gy,gw,gh);
+              // selected color behaves like fabric dye, preserving luminance/detail
+              ctx.globalCompositeOperation='multiply';ctx.globalAlpha=.34;ctx.fillStyle=selectedColor?.hex||selectedProduct.colorHex;ctx.fillRect(gx,gy,gw,gh);
+              // soft directional fabric light rather than a flat polygon
+              ctx.globalCompositeOperation='soft-light';ctx.globalAlpha=.32;
+              const light=ctx.createLinearGradient(gx,gy,gx+gw,gy+gh);light.addColorStop(0,'rgba(255,255,255,.7)');light.addColorStop(.48,'rgba(255,255,255,.08)');light.addColorStop(1,'rgba(0,0,0,.42)');ctx.fillStyle=light;ctx.fillRect(gx,gy,gw,gh);
+              ctx.restore();
+
+              // Occlusion: restore foreground person pixels over garment around head/arms.
+              // The backend mask is real MediaPipe segmentation; clipping is conservative so torso garment remains visible.
+              if(personMaskRef.current?.complete){
+                ctx.save();ctx.globalAlpha=.98;ctx.globalCompositeOperation='source-over';
+                const headBottom=Math.min(ls.y,rs.y)+torsoH*.02;
+                ctx.beginPath();ctx.rect(0,0,width,headBottom);ctx.clip();ctx.drawImage(personMaskRef.current,0,0,width,height);ctx.restore();
               }
-              // Sleeves are articulated independently along shoulder/elbow/wrist.
-              const sleeve=(p0:any,p1:any,p2:any)=>{
-                if(!p0||!p1)return;const pts=[p0,p1,...(p2?[p2]:[])];ctx.save();ctx.globalAlpha=.9;ctx.fillStyle=color;ctx.strokeStyle='rgba(148,163,184,.85)';ctx.lineWidth=2;
-                const widths=[Math.max(18,shoulderSpan*.14),Math.max(14,shoulderSpan*.105),Math.max(10,shoulderSpan*.075)];
-                const left:any[]=[],right:any[]=[];for(let i=0;i<pts.length;i++){const prev=pts[Math.max(0,i-1)],next=pts[Math.min(pts.length-1,i+1)],dx=next.x-prev.x,dy=next.y-prev.y,len=Math.hypot(dx,dy)||1,nx=-dy/len,ny=dx/len;left.push({x:pts[i].x+nx*widths[i],y:pts[i].y+ny*widths[i]});right.push({x:pts[i].x-nx*widths[i],y:pts[i].y-ny*widths[i]});}
-                ctx.beginPath();ctx.moveTo(left[0].x,left[0].y);for(const p of left.slice(1))ctx.lineTo(p.x,p.y);for(const p of right.reverse())ctx.lineTo(p.x,p.y);ctx.closePath();ctx.fill();ctx.stroke();
-                ctx.globalAlpha=.25;ctx.strokeStyle='#fff';ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);if(p2)ctx.lineTo(p2.x,p2.y);ctx.stroke();ctx.restore();
-              };
-              sleeve(ls,le,lw);sleeve(rs,re,rw);
             }
           }
 
