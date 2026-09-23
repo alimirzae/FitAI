@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const t = TRANSLATIONS[lang];
 
   const modes = [
+    { id: 'simple_tryon' as OperatingMode, label: t.modes.simple_tryon, icon: Sparkles },
     { id: 'fitting_room' as OperatingMode, label: t.modes.fitting_room, icon: Shirt },
     { id: 'storefront' as OperatingMode, label: t.modes.storefront, icon: Store },
     { id: 'body_engine' as OperatingMode, label: t.modes.body_engine, icon: UserCheck },

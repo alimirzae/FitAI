@@ -1,4 +1,4 @@
-export type OperatingMode = 'fitting_room' | 'storefront' | 'body_engine' | 'salon' | 'analytics';
+export type OperatingMode = 'simple_tryon' | 'fitting_room' | 'storefront' | 'body_engine' | 'salon' | 'analytics';
 
 export type ClothingCategory = 'upper_body' | 'jackets' | 'dresses' | 'lower_body' | 'full_outfit';
 

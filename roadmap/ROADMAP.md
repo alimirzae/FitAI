@@ -25,9 +25,16 @@ Status legend: DONE = real runnable implementation; PROTOTYPE = UI/demo logic; T
 - TODO install reviewed semantic hair segmentation + hairstyle synthesis provider before rendering transformed hair
 - TODO semantic pixel-level hair segmentation for precise occlusion/boundaries
 - TODO production hairstyle synthesis
-- TODO metric anthropometry in centimeters
+- DONE metric anthropometry in centimeters, gated behind known-height camera calibration (backend/vto/measure.py)
+- DONE size suggestion from calibrated joint spans, thresholds editable in backend/vto/sizes.json
 - TODO face identity/returning-customer recognition
-- TODO production virtual try-on model
+- DONE generative try-on pipeline: pose -> agnostic mask -> letterbox -> engine -> restore -> composite (backend/vto/)
+- DONE two real engines behind one contract: diffusers-inpaint (permissive, ~6 GB VRAM) and external CatVTON/IDM-VTON checkout
+- DONE simplest try-on UI as the default mode: photo -> garment -> result
+- DONE 39 CPU-only tests for mask geometry, pipeline round-trip and measurement, wired into CI
+- TODO first verified generated image on real GPU hardware (weights not yet installed anywhere)
+- TODO retune backend/vto/sizes.json against real customers of known size
+- TODO isolated garment assets for the real catalog (current manifest holds one placeholder)
 - TODO production hair synthesis
 - TODO demographic/expression models
 

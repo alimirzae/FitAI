@@ -1,0 +1,40 @@
+{
+  "_readme": [
+    "Size suggestion thresholds, in centimetres.",
+    "",
+    "These are distances between MediaPipe JOINT landmarks, not tailoring",
+    "measurements. 'shoulder' is shoulder-joint to shoulder-joint (roughly 0.24",
+    "of a person's height) and 'hip' is hip-joint to hip-joint (roughly 0.12 of",
+    "height). They are NOT chest circumference or waist circumference.",
+    "",
+    "The values below are starting estimates for adults. Retune them against",
+    "real customers before trusting them in a store: calibrate the camera, note",
+    "the centimetre reading for several people whose size you already know, and",
+    "move the boundaries to match.",
+    "",
+    "Each row is [size name, from (inclusive), to (exclusive)]."
+  ],
+  "tables": {
+    "shoulder": [
+      ["XS", 0, 34.5],
+      ["S", 34.5, 37.5],
+      ["M", 37.5, 40.5],
+      ["L", 40.5, 43.5],
+      ["XL", 43.5, 46.5],
+      ["XXL", 46.5, 999]
+    ],
+    "hip": [
+      ["XS", 0, 17.5],
+      ["S", 17.5, 19.5],
+      ["M", 19.5, 21.5],
+      ["L", 21.5, 23.5],
+      ["XL", 23.5, 26],
+      ["XXL", 26, 999]
+    ]
+  },
+  "categoryUses": {
+    "upper": "shoulder",
+    "overall": "shoulder",
+    "lower": "hip"
+  }
+}

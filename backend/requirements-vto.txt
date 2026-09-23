@@ -1,0 +1,24 @@
+# Optional: photorealistic virtual try-on generation.
+#
+# Installing this file is what turns FitAI's try-on from "unavailable" into a
+# real generative renderer. It is deliberately separate from
+# backend/requirements.txt so that a clean clone stays installable and runnable
+# on a machine with no GPU (AGENTS.md rule 10).
+#
+#   .venv\Scripts\python -m pip install -r backend/requirements-vto.txt
+#   python -m backend.vto.runner --status
+#
+# The index URL below fetches CUDA 12.1 builds. On a CPU-only machine drop the
+# --extra-index-url line; generation will work but take minutes per image.
+
+--extra-index-url https://download.pytorch.org/whl/cu121
+
+torch==2.5.1
+torchvision==0.20.1
+
+diffusers==0.31.0
+transformers==4.46.3
+accelerate==1.1.1
+safetensors==0.4.5
+huggingface-hub==0.26.2
+peft==0.13.2
