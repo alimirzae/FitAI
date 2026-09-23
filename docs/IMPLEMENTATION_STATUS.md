@@ -103,6 +103,42 @@ the synthetic reference pose:
   silhouette is now unioned in, with pose deciding only which part of it the
   category owns.
 
+## Mask, resolution and garment framing — 2026-09-22
+
+The engine now decides two things the pipeline used to fix for it.
+
+MASK PROFILE. A regenerating engine paints new clothing into the hole and
+needs room past the body; a warping engine stretches the garment to fill
+whatever it is given, so every pixel past the garment's real hem becomes
+stretched fabric. `diffusers-inpaint` asks for `generous`, `external` for
+`tight`. Measured on the reference photo: 18.4% of frame -> 14.8%.
+
+That fix took two attempts, and the first one did nothing. The mask is the
+union of a drawn band and the segmentation silhouette, and only the band was
+scaled by the profile - the silhouette's lower bound kept a hard-coded 0.34
+torso-lengths below the hips. Since the silhouette covers the whole worn
+outfit it simply overrode the band, and both profiles came out within 0.3% of
+each other on a real photo. The unit test missed it because it passed no
+silhouette, while the real path always does; there is now a test that does.
+
+RESOLUTION. Engines declare what they were trained at, and the pipeline uses
+it. CatVTON's checkpoints are 768x1024 and were being run at 576x768. Native
+resolution costs about 50 s per image instead of 31 s on an RTX 4060.
+
+GARMENT FRAMING. `trim_garment_border` crops the uniform backdrop before
+conditioning, since a garment filling a third of its photo spent two thirds of
+the signal describing the backdrop. Background colour is sampled from the
+border rather than assumed white, and an implausible crop returns the original
+untouched. Measured: 1000x1334 -> 1000x997 on a catalog shot.
+
+REMAINING, both measured and neither fixable in FitAI's code:
+- A band of stretched garment still appears across the skirt on roughly one
+  run in three, down from most runs. Regenerating is the remedy, which the
+  try-on screen offers.
+- Text and logos come out mirrored. Verified not to be a pipeline transform:
+  the garment reads correctly at every stage up to the engine, so this is the
+  model. A shop selling branded goods will notice.
+
 ## CatVTON wired up, and what it showed about garment photography — 2026-09-22
 
 RUNNABLE: the `external` engine now drives CatVTON through

@@ -29,6 +29,22 @@ from the original photograph. Diffusion decoders shift colour across the whole
 frame; without this step the customer's face and skin tone come back subtly
 wrong.
 
+## Check it yourself
+
+One photo in, one photo out, without starting the backend or the frontend:
+
+    python scripts/tryon.py --person me.jpg --garment shirt.jpg --sheet check.png
+
+`--sheet` writes person | garment | mask | result side by side, so when a
+result looks wrong you can see whether the mask was the reason. Add
+`--engine external` for CatVTON, `--category lower` for trousers or a skirt,
+and `--seed 21` to repeat a specific result.
+
+**Garment photography decides most of the quality.** An upright, front-facing,
+flat product shot on a plain background transfers correctly. A garment folded
+or lying at an angle is reproduced folded and at an angle - measured on the
+same person and mask, only the garment photo changing.
+
 ## Weights
 
     python scripts/fetch_vto_weights.py --check      # what is already cached

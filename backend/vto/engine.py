@@ -61,6 +61,13 @@ class GenerationRequest:
 class VtoEngine(ABC):
     name: str = "engine"
 
+    # What kind of mask this engine wants. See backend.vto.preprocess.
+    mask_profile: str = "generous"
+    # The resolution this engine was trained at, as (width, height). Working
+    # far below it costs real detail, which is what makes a garment read as
+    # flat rather than worn.
+    native_resolution: tuple[int, int] = (576, 768)
+
     @abstractmethod
     def available(self) -> bool:
         """True when this engine can actually run right now."""
@@ -87,6 +94,12 @@ class DiffusersInpaintEngine(VtoEngine):
     """
 
     name = "diffusers-inpaint"
+    # This engine invents the drape, so it needs room past the body.
+    mask_profile = "generous"
+    # Stable Diffusion 1.5 was trained at 512; 576x768 keeps the aspect ratio
+    # of a standing person without drifting far enough from training to start
+    # duplicating limbs.
+    native_resolution = (576, 768)
 
     BASE_MODEL = os.getenv("FITAI_VTO_BASE_MODEL", "runwayml/stable-diffusion-inpainting")
     IP_ADAPTER_REPO = os.getenv("FITAI_VTO_IP_ADAPTER_REPO", "h94/IP-Adapter")
@@ -245,6 +258,14 @@ class ExternalCommandEngine(VtoEngine):
     """
 
     name = "external"
+    # Warping engines stretch the garment to fill the mask, so the mask has to
+    # stop where the garment really ends.
+    mask_profile = os.getenv("FITAI_VTO_MASK_PROFILE", "tight")
+    # CatVTON's released checkpoints are trained at 768x1024.
+    native_resolution = (
+        int(os.getenv("FITAI_VTO_WIDTH", "768")),
+        int(os.getenv("FITAI_VTO_HEIGHT", "1024")),
+    )
 
     def __init__(self, env_name: str = "FITAI_VTO_COMMAND") -> None:
         self.env_name = env_name

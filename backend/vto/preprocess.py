@@ -47,6 +47,37 @@ CATEGORIES = ("upper", "lower", "overall")
 
 
 @dataclass(frozen=True)
+class MaskProfile:
+    """How much room past the body the mask should leave.
+
+    The right answer depends on what the engine does with the region, and the
+    two kinds of engine want opposite things.
+
+    A *regenerating* engine paints new clothing into the hole. It needs room
+    past the body or a loose garment has nowhere to drape, and anything it
+    does not need it simply fills with background.
+
+    A *warping* engine stretches the actual garment to fill whatever it is
+    given. Every pixel of mask past the garment's real hem becomes stretched
+    fabric - with a generous mask that shows up as a band of cloth hanging
+    across the skirt.
+    """
+
+    name: str
+    widen: float = 1.0    # how far past the joints the torso and hip bands reach
+    drop: float = 1.0     # how far below the hips an upper garment may fall
+    arm: float = 1.0      # sleeve thickness
+
+
+MASK_PROFILES = {
+    "generous": MaskProfile("generous"),
+    "tight": MaskProfile("tight", widen=0.72, drop=0.22, arm=0.86),
+}
+
+DEFAULT_MASK_PROFILE = "generous"
+
+
+@dataclass(frozen=True)
 class Landmark:
     x: float          # normalized 0..1 across image width
     y: float          # normalized 0..1 across image height
@@ -121,6 +152,7 @@ def build_agnostic_mask(
     category: str = "upper",
     person_mask: Optional[Image.Image] = None,
     feather: int = 9,
+    profile: str = DEFAULT_MASK_PROFILE,
 ) -> Image.Image:
     """Return an 8-bit mask where white (255) is the region to repaint.
 
@@ -131,6 +163,9 @@ def build_agnostic_mask(
     """
     if category not in CATEGORIES:
         raise ValueError(f"category must be one of {CATEGORIES}, got {category!r}")
+    if profile not in MASK_PROFILES:
+        raise ValueError(f"profile must be one of {sorted(MASK_PROFILES)}, got {profile!r}")
+    shape = MASK_PROFILES[profile]
 
     lm = as_landmarks(landmarks)
     w, h = size
@@ -146,8 +181,8 @@ def build_agnostic_mask(
 
     # A loose garment can sit well outside the joint centres, so every band is
     # widened relative to the skeleton rather than tracing it exactly.
-    arm_r = max(shoulder_span * 0.17, 6.0)
-    leg_r = max(shoulder_span * 0.20, 6.0)
+    arm_r = max(shoulder_span * 0.17 * shape.arm, 6.0)
+    leg_r = max(shoulder_span * 0.20 * shape.arm, 6.0)
 
     mask = Image.new("L", (w, h), 0)
     draw = ImageDraw.Draw(mask)
@@ -161,10 +196,10 @@ def build_agnostic_mask(
 
     if category in ("upper", "overall"):
         # Torso: from above the shoulder line down past the hips.
-        top_l, top_r = _widen(shoulder_l, shoulder_r, 1.34)
-        bot_l, bot_r = _widen(hip_l, hip_r, 1.72)
+        top_l, top_r = _widen(shoulder_l, shoulder_r, 1.0 + 0.34 * shape.widen)
+        bot_l, bot_r = _widen(hip_l, hip_r, 1.0 + 0.72 * shape.widen)
         lift = torso_len * 0.16
-        drop = torso_len * (0.34 if category == "upper" else 0.10)
+        drop = torso_len * (0.34 if category == "upper" else 0.10) * shape.drop
         draw.polygon([
             (top_l[0], top_l[1] - lift), (top_r[0], top_r[1] - lift),
             (bot_r[0], bot_r[1] + drop), (bot_l[0], bot_l[1] + drop),
@@ -179,7 +214,7 @@ def build_agnostic_mask(
                 band(P(el), P(wr), arm_r * 0.86)
 
     if category in ("lower", "overall"):
-        top_l, top_r = _widen(hip_l, hip_r, 1.78)
+        top_l, top_r = _widen(hip_l, hip_r, 1.0 + 0.78 * shape.widen)
         rise = torso_len * (0.30 if category == "lower" else 0.0)
         draw.polygon([
             (top_l[0], top_l[1] - rise), (top_r[0], top_r[1] - rise),
@@ -205,7 +240,7 @@ def build_agnostic_mask(
     # person leans.
     if person_mask is not None:
         silhouette = person_mask.convert("L").resize((w, h), Image.BILINEAR)
-        grow = max(3, int(shoulder_span * 0.16))
+        grow = max(3, int(shoulder_span * 0.16 * shape.widen))
         silhouette = silhouette.filter(ImageFilter.MaxFilter(_odd(min(grow, 31))))
         body = np.asarray(silhouette) > 127
 
@@ -214,7 +249,12 @@ def build_agnostic_mask(
         # the customer's face and hair - the one thing that must survive.
         neck = _below_line(size, shoulder_l, shoulder_r, -torso_len * 0.13, above=False)
         if category == "upper":
-            region = neck & _below_line(size, hip_l, hip_r, torso_len * 0.34, above=True)
+            # This bound has to follow the profile as well. The silhouette
+            # covers the whole worn outfit, so if it is allowed further down
+            # than the drawn band it simply overrides it, and the profile has
+            # no effect on the mask that actually reaches the engine.
+            region = neck & _below_line(size, hip_l, hip_r,
+                                        torso_len * 0.34 * shape.drop, above=True)
         elif category == "lower":
             region = _below_line(size, hip_l, hip_r, -torso_len * 0.30, above=False)
         else:
